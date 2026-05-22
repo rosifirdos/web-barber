@@ -53,8 +53,47 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
         }
     }
     // Redirect back to clean up URL
-    redirect(BASE_URL . '/admin/antrian.php' . (isset($_GET['page']) ? '?page=' . (int)$_GET['page'] : ''));
+    $queryParams = $_GET;
+    unset($queryParams['action'], $queryParams['id']);
+    $queryString = !empty($queryParams) ? '?' . http_build_query($queryParams) : '';
+    redirect(BASE_URL . '/admin/antrian.php' . $queryString);
 }
+
+// Filter Setup
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$statusFilter = isset($_GET['status']) ? $_GET['status'] : '';
+$startDate = isset($_GET['start_date']) ? $_GET['start_date'] : '';
+$endDate = isset($_GET['end_date']) ? $_GET['end_date'] : '';
+
+$whereConditions = [];
+$params = [];
+$types = '';
+
+if ($search !== '') {
+    $whereConditions[] = "b.nama_pelanggan LIKE ?";
+    $params[] = "%$search%";
+    $types .= 's';
+}
+
+if ($statusFilter !== '' && in_array($statusFilter, ['Pending', 'Proses', 'Selesai', 'Batal'])) {
+    $whereConditions[] = "b.status = ?";
+    $params[] = $statusFilter;
+    $types .= 's';
+}
+
+if ($startDate !== '') {
+    $whereConditions[] = "b.tanggal >= ?";
+    $params[] = $startDate;
+    $types .= 's';
+}
+
+if ($endDate !== '') {
+    $whereConditions[] = "b.tanggal <= ?";
+    $params[] = $endDate;
+    $types .= 's';
+}
+
+$whereClause = !empty($whereConditions) ? " WHERE " . implode(" AND ", $whereConditions) : "";
 
 // Pagination setup
 $limit = 10;
@@ -63,9 +102,18 @@ if ($page < 1) $page = 1;
 $offset = ($page - 1) * $limit;
 
 // Count total records for pagination
-$countQuery = "SELECT COUNT(*) as total FROM booking";
-$totalResult = $conn->query($countQuery);
-$totalRows = $totalResult ? $totalResult->fetch_assoc()['total'] : 0;
+$countQuery = "SELECT COUNT(*) as total FROM booking b" . $whereClause;
+if (!empty($params)) {
+    $stmtCount = $conn->prepare($countQuery);
+    $stmtCount->bind_param($types, ...$params);
+    $stmtCount->execute();
+    $totalResult = $stmtCount->get_result();
+    $totalRows = $totalResult ? $totalResult->fetch_assoc()['total'] : 0;
+    $stmtCount->close();
+} else {
+    $totalResult = $conn->query($countQuery);
+    $totalRows = $totalResult ? $totalResult->fetch_assoc()['total'] : 0;
+}
 $totalPages = ceil($totalRows / $limit);
 
 // Fetch data with Join for Service and Barber
@@ -73,24 +121,74 @@ $bookingQuery = "SELECT b.*, l.nama as nama_layanan, l.harga as harga_layanan, b
                  FROM booking b 
                  JOIN layanan l ON b.layanan_id = l.id 
                  JOIN barber bar ON b.barber_id = bar.id 
+                 $whereClause
                  ORDER BY b.tanggal DESC, b.jam DESC 
                  LIMIT ? OFFSET ?";
+
 $stmt = $conn->prepare($bookingQuery);
-$stmt->bind_param('ii', $limit, $offset);
+$typesWithLimit = $types . 'ii';
+$paramsWithLimit = array_merge($params, [$limit, $offset]);
+// Extract values for bind_param dynamically
+$bindParams = [];
+$bindParams[] = &$typesWithLimit;
+for ($i = 0; $i < count($paramsWithLimit); $i++) {
+    $bindParams[] = &$paramsWithLimit[$i];
+}
+call_user_func_array([$stmt, 'bind_param'], $bindParams);
+
 $stmt->execute();
 $bookings = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+
+// Build Query String for pagination
+$queryParams = $_GET;
+unset($queryParams['page']);
+$queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
 ?>
 
 <!-- ============================================
      TABLE OF BOOKINGS
      ============================================ -->
 <div class="admin-card">
-    <div class="admin-card__header">
-        <h3 class="admin-card__title">
-            <i data-lucide="list-ordered"></i>
-            Daftar Antrean Pelanggan
-        </h3>
+    <div class="admin-card__header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3 class="admin-card__title">
+                <i data-lucide="list-ordered"></i>
+                Daftar Antrean Pelanggan
+            </h3>
+        </div>
+        
+        <!-- Filter Form -->
+        <form method="GET" action="" class="filter-bar" style="display: flex; flex-wrap: wrap; gap: 15px; background: var(--bg-card-alt); padding: 15px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <div class="form-group" style="flex: 1; min-width: 200px;">
+                <label style="font-size: var(--text-sm); margin-bottom: 5px; display: block;">Cari Nama</label>
+                <input type="text" name="search" class="form-input" placeholder="Nama Pelanggan..." value="<?= htmlspecialchars($search) ?>" style="width: 100%;">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 150px;">
+                <label style="font-size: var(--text-sm); margin-bottom: 5px; display: block;">Status</label>
+                <select name="status" class="form-input" style="width: 100%;">
+                    <option value="">Semua Status</option>
+                    <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                    <option value="Proses" <?= $statusFilter === 'Proses' ? 'selected' : '' ?>>Proses</option>
+                    <option value="Selesai" <?= $statusFilter === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
+                    <option value="Batal" <?= $statusFilter === 'Batal' ? 'selected' : '' ?>>Batal</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 130px;">
+                <label style="font-size: var(--text-sm); margin-bottom: 5px; display: block;">Mulai Tanggal</label>
+                <input type="date" name="start_date" class="form-input" value="<?= htmlspecialchars($startDate) ?>" style="width: 100%;">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 130px;">
+                <label style="font-size: var(--text-sm); margin-bottom: 5px; display: block;">Sampai Tanggal</label>
+                <input type="date" name="end_date" class="form-input" value="<?= htmlspecialchars($endDate) ?>" style="width: 100%;">
+            </div>
+            <div class="form-group" style="display: flex; align-items: flex-end;">
+                <button type="submit" class="btn btn--primary" style="height: 42px;">Filter</button>
+                <?php if (!empty($_GET) && (!isset($_GET['page']) || count($_GET) > 1)): ?>
+                    <a href="?" class="btn btn--secondary" style="height: 42px; margin-left: 10px;">Reset</a>
+                <?php endif; ?>
+            </div>
+        </form>
     </div>
     <div class="admin-card__body" style="padding: 0;">
         <div class="table-responsive">
@@ -166,22 +264,27 @@ $stmt->close();
                                         <!-- Quick Status Actions -->
                                         <?php if ($b['status'] === 'Pending'): ?>
                                             <!-- Change to Proses -->
-                                            <a href="?action=proses&id=<?= $b['id'] ?>&page=<?= $page ?>" class="btn-action btn-action--process" title="Mulai Proses Cukur">
+                                            <a href="?action=proses&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>" class="btn-action btn-action--process" title="Mulai Proses Cukur">
                                                 <i data-lucide="play" style="width: 15px; height: 15px;"></i>
                                             </a>
                                             <!-- Change to Batal -->
-                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?>')" title="Batalkan Booking">
+                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
                                                 <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
                                             </button>
                                         <?php elseif ($b['status'] === 'Proses'): ?>
                                             <!-- Change to Selesai -->
-                                            <a href="?action=selesai&id=<?= $b['id'] ?>&page=<?= $page ?>" class="btn-action btn-action--success" title="Selesaikan Layanan">
+                                            <a href="?action=selesai&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>" class="btn-action btn-action--success" title="Selesaikan Layanan">
                                                 <i data-lucide="check" style="width: 15px; height: 15px;"></i>
                                             </a>
                                             <!-- Change to Batal -->
-                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?>')" title="Batalkan Booking">
+                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
                                                 <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
                                             </button>
+                                        <?php elseif ($b['status'] === 'Selesai'): ?>
+                                            <!-- Cetak Struk -->
+                                            <a href="<?= BASE_URL ?>/admin/cetak-struk.php?id=<?= $b['id'] ?>" target="_blank" class="btn-action btn-action--view" title="Cetak Struk PDF">
+                                                <i data-lucide="printer" style="width: 15px; height: 15px;"></i>
+                                            </a>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -200,20 +303,20 @@ $stmt->close();
 <?php if ($totalPages > 1): ?>
     <div class="pagination" style="margin-top: var(--space-xl); justify-content: flex-end;">
         <?php if ($page > 1): ?>
-            <a href="?page=<?= $page - 1 ?>" class="pagination__btn">
+            <a href="?page=<?= $page - 1 ?><?= $queryString ?>" class="pagination__btn">
                 <i data-lucide="chevron-left" style="width: 16px; height: 16px;"></i>
                 Sebelumnya
             </a>
         <?php endif; ?>
 
         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
-            <a href="?page=<?= $i ?>" class="pagination__btn <?= $i === $page ? 'active' : '' ?>">
+            <a href="?page=<?= $i ?><?= $queryString ?>" class="pagination__btn <?= $i === $page ? 'active' : '' ?>">
                 <?= $i ?>
             </a>
         <?php endfor; ?>
 
         <?php if ($page < $totalPages): ?>
-            <a href="?page=<?= $page + 1 ?>" class="pagination__btn">
+            <a href="?page=<?= $page + 1 ?><?= $queryString ?>" class="pagination__btn">
                 Berikutnya
                 <i data-lucide="chevron-right" style="width: 16px; height: 16px;"></i>
             </a>
