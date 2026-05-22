@@ -38,6 +38,11 @@ if (!isset($activePage)) $activePage = 'home';
 
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+
+    <!-- Global JS Variables -->
+    <script>
+        const BASE_URL = '<?= BASE_URL ?>';
+    </script>
 </head>
 <body>
 

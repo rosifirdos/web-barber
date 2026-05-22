@@ -58,5 +58,5 @@ date_default_timezone_set('Asia/Jakarta');
 // ============================================
 // GEMINI API (untuk Chatbot — Sesi 6)
 // ============================================
-define('GEMINI_API_KEY', ''); // Isi API key di sini nanti
+define('GEMINI_API_KEY', 'AIzaSyB2yM3k-3fcUiXEO2h393jG6cTXck8wiqQ'); // Isi API key di sini nanti
 define('GEMINI_MODEL', 'gemini-2.0-flash');

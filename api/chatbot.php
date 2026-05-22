@@ -1,68 +1,70 @@
 <?php
 /**
- * IF Barber — Gemini Chatbot API Endpoint
+ * IF Barber — Chatbot API Endpoint (Hybrid)
+ * Menggunakan logika hardcoded sebagai fallback, dan Gemini API hanya untuk memperhalus bahasa.
  */
 require_once __DIR__ . '/../includes/config.php';
 
 header('Content-Type: application/json');
 
-// Get POST data
 $input = json_decode(file_get_contents('php://input'), true);
 $userMessage = $input['message'] ?? '';
-
-if (empty(GEMINI_API_KEY)) {
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'API Key belum dikonfigurasi. Admin perlu menambahkan GEMINI_API_KEY di config.php.'
-    ]);
-    exit;
-}
+$userMessageLower = strtolower($userMessage);
 
 if (empty($userMessage)) {
     echo json_encode(['status' => 'error', 'message' => 'Pesan tidak boleh kosong.']);
     exit;
 }
 
-// System Prompt: Konteks untuk Chatbot IF Barber
-$systemPrompt = "
-Anda adalah asisten virtual resmi untuk 'IF Barber'. Jawablah pertanyaan pelanggan dengan bahasa Indonesia yang ramah, profesional, sopan, dan cukup singkat (maksimal 2 paragraf pendek). Gunakan format teks biasa, tanpa markdown kompleks, tapi boleh pakai emoji secukupnya.
-Informasi IF Barber:
-- Alamat: Jl. Contoh Alamat No. 123, Kota Anda.
-- Jam Buka: Senin - Sabtu (09:00 - 21:00 WIB). Minggu Tutup.
-- Layanan yang tersedia:
-  1. Haircut Premium (Rp 50.000) - Cuci, potong, pijat, styling.
-  2. Haircut & Beard Trim (Rp 75.000) - Potong rambut dan cukur/rapihkan brewok.
-  3. Hair Coloring (Rp 150.000) - Pewarnaan rambut pria.
-  4. Kid's Haircut (Rp 35.000) - Potong rambut anak (<12 tahun).
-- Barber kami: Arief (Spesialis Classic Cut), Bayu (Spesialis Fade), Dimas (Hair Tattoo), Reza (Hair Coloring).
-- Cara booking online: Pelanggan dapat melakukan booking jadwal melalui website ini dengan menekan tombol 'Book Now' di menu atas.
-- Keunggulan: Barbershop premium, alat steril, ruang full AC, free WiFi.
+// 1. Tentukan Jawaban Mentah (Hardcoded Draft) berdasarkan kata kunci
+$draftAnswer = "";
 
-Aturan Tambahan:
-- Jangan memberikan saran medis kulit kepala.
-- Jika ditanya hal di luar urusan barbershop atau pangkas rambut, tolak dengan halus dan arahkan kembali ke topik layanan IF Barber.
-- Selalu dorong pengguna untuk melakukan booking online.
+if (strpos($userMessageLower, 'jam') !== false || strpos($userMessageLower, 'buka') !== false || strpos($userMessageLower, 'tutup') !== false || strpos($userMessageLower, 'jadwal') !== false) {
+    $draftAnswer = "IF Barber buka setiap hari Senin sampai Sabtu, mulai pukul " . JAM_BUKA . " hingga " . JAM_TUTUP . " WIB. Hari Minggu kami tutup.";
+} elseif (strpos($userMessageLower, 'harga') !== false || strpos($userMessageLower, 'layanan') !== false || strpos($userMessageLower, 'biaya') !== false || strpos($userMessageLower, 'tarif') !== false || strpos($userMessageLower, 'potong') !== false) {
+    $draftAnswer = "Kami menyediakan berbagai layanan: Haircut Premium (Rp 50.000), Haircut & Beard Trim (Rp 75.000), Hair Coloring (Rp 150.000), dan Kid's Haircut (Rp 35.000). Alat steril dan ruang full AC.";
+} elseif (strpos($userMessageLower, 'lokasi') !== false || strpos($userMessageLower, 'alamat') !== false || strpos($userMessageLower, 'dimana') !== false) {
+    $draftAnswer = "Lokasi IF Barber berada di Jl. Contoh Alamat No. 123. Anda bisa langsung datang atau booking online terlebih dahulu.";
+} elseif (strpos($userMessageLower, 'booking') !== false || strpos($userMessageLower, 'pesan') !== false || strpos($userMessageLower, 'antre') !== false || strpos($userMessageLower, 'daftar') !== false) {
+    $draftAnswer = "Untuk menghindari antrean, Anda sangat disarankan untuk melakukan booking jadwal secara online melalui website ini. Silakan klik tombol 'Book Now' di bagian atas halaman.";
+} elseif (strpos($userMessageLower, 'barber') !== false || strpos($userMessageLower, 'kapster') !== false || strpos($userMessageLower, 'tukang cukur') !== false) {
+    $draftAnswer = "Kami memiliki beberapa barber profesional: Arief (Spesialis Classic Cut), Bayu (Spesialis Fade), Dimas (Hair Tattoo), dan Reza (Hair Coloring).";
+} else {
+    $draftAnswer = "Halo! Saya adalah asisten virtual IF Barber. Anda bisa bertanya kepada saya seputar jam buka, daftar harga layanan, lokasi, atau cara booking online. Ada yang bisa saya bantu?";
+}
+
+// Jika API Key tidak ada, langsung kembalikan jawaban mentah (tanpa error)
+if (empty(GEMINI_API_KEY)) {
+    echo json_encode([
+        'status' => 'success',
+        'reply' => $draftAnswer
+    ]);
+    exit;
+}
+
+// 2. Gunakan Gemini API hanya untuk memperhalus (Paraphrasing) agar lebih natural
+$systemPrompt = "
+Anda adalah asisten IF Barber. Tugas Anda HANYA SATU: memperhalus kalimat jawaban mentah (draft) agar terdengar lebih natural, ramah, dan profesional layaknya manusia saat membalas pesan pelanggan. 
+ATURAN MUTLAK:
+- JANGAN MENGUBAH FAKTA dari jawaban mentah (jam, harga, nama).
+- JANGAN MENAMBAH INFORMASI yang tidak ada di jawaban mentah.
+- Cukup tulis ulang kalimatnya agar lebih luwes dan komunikatif. Tambahkan sapaan jika perlu. Boleh pakai sedikit emoji.
 ";
+
+$userPrompt = "Pesan pelanggan: \"{$userMessage}\"\nJawaban mentah yang harus Anda perhalus: \"{$draftAnswer}\"";
 
 $url = 'https://generativelanguage.googleapis.com/v1beta/models/' . GEMINI_MODEL . ':generateContent?key=' . GEMINI_API_KEY;
 
 $data = [
     'system_instruction' => [
-        'parts' => [
-            ['text' => $systemPrompt]
-        ]
+        'parts' => [['text' => $systemPrompt]]
     ],
     'contents' => [
-        [
-            'role' => 'user',
-            'parts' => [
-                ['text' => $userMessage]
-            ]
-        ]
+        ['role' => 'user', 'parts' => [['text' => $userPrompt]]]
     ],
     'generationConfig' => [
-        'temperature' => 0.7,
-        'maxOutputTokens' => 300,
+        'temperature' => 0.5,
+        'maxOutputTokens' => 200,
     ]
 ];
 
@@ -71,28 +73,30 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-// CURLOPT_SSL_VERIFYPEER set false agar jalan mulus di localhost XAMPP tanpa sertifikat SSL valid
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Khusus localhost
+curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Set timeout maksimal 10 detik agar tidak hang jika API lambat
 
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $error = curl_error($ch);
 curl_close($ch);
 
-if ($error) {
-    echo json_encode(['status' => 'error', 'message' => 'Koneksi ke server gagal: ' . $error]);
+// 3. Evaluasi respon Gemini. Jika terjadi error koneksi atau Quota Exceeded (429), gunakan $draftAnswer!
+if ($error || $httpCode !== 200) {
+    echo json_encode([
+        'status' => 'success',
+        'reply' => $draftAnswer
+    ]);
     exit;
 }
 
 $responseData = json_decode($response, true);
+$reply = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? '';
 
-if ($httpCode !== 200) {
-    $apiErrorMsg = $responseData['error']['message'] ?? 'Unknown error';
-    echo json_encode(['status' => 'error', 'message' => 'Gemini API Error: ' . $apiErrorMsg]);
-    exit;
+// Jika entah kenapa balasan Gemini kosong, tetap gunakan $draftAnswer
+if (empty(trim($reply))) {
+    $reply = $draftAnswer;
 }
-
-$reply = $responseData['candidates'][0]['content']['parts'][0]['text'] ?? 'Maaf, saya tidak dapat memproses permintaan tersebut.';
 
 echo json_encode([
     'status' => 'success',
