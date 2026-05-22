@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS booking (
 -- Password: admin123 (hashed with password_hash)
 -- ============================================
 INSERT INTO admin (username, password, nama) VALUES
-('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator IF Barber');
+('admin', '$2y$10$OWfEhpjlJljiGbt8Zmbkjuq/w.Pvxxd5o1O7/2UTDTGp/6CX087SO', 'Administrator IF Barber');
 
 -- ============================================
 -- SEED DATA: Layanan barbershop
