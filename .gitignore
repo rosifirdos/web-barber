@@ -1,0 +1,18 @@
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# PHP Composer dependencies
+vendor/
+
+# Database exports or backups (except database/schema.sql)
+*.sql
+!database/schema.sql
+
+# Local config or environment files
+.env
+config.local.php
