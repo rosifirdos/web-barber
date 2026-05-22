@@ -128,7 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             position: relative;
         }
 
-        .input-icon-wrapper i {
+        .input-icon-wrapper i,
+        .input-icon-wrapper svg {
             position: absolute;
             left: var(--space-md);
             top: 50%;
@@ -142,7 +143,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding-left: calc(var(--space-md) * 2 + 18px);
         }
 
-        .input-icon-wrapper .form-input:focus ~ i {
+        .input-icon-wrapper .form-input:focus ~ i,
+        .input-icon-wrapper .form-input:focus ~ svg {
             color: var(--color-accent);
         }
 
