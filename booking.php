@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $memberId = isMemberLoggedIn() ? $_SESSION['member_id'] : null;
 
         $stmt = $conn->prepare("INSERT INTO booking (nama_pelanggan, no_hp, layanan_id, barber_id, tanggal, jam, status, member_id, total_harga, catatan) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)");
-        $stmt->bind_param('ssiisstds', $nama, $noHp, $layananId, $barberId, $tanggal, $jam, $memberId, $totalHarga, $catatan);
+        $stmt->bind_param('ssiissids', $nama, $noHp, $layananId, $barberId, $tanggal, $jam, $memberId, $totalHarga, $catatan);
 
         if ($stmt->execute()) {
             $bookingId = $stmt->insert_id;
