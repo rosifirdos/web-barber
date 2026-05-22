@@ -88,8 +88,50 @@
         </div>
     </footer>
 
+    <!-- ============================================
+         CHATBOT WIDGET
+         ============================================ -->
+    <button class="chatbot-toggle" id="chatbotToggle" aria-label="Tanya Asisten AI">
+        <i data-lucide="message-square" style="width: 24px; height: 24px;"></i>
+    </button>
+
+    <div class="chatbot-window" id="chatbotWindow">
+        <div class="chatbot-header">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div class="chatbot-avatar">
+                    <i data-lucide="bot" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div>
+                    <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">Asisten IF Barber</h4>
+                    <span style="font-size: 11px; color: #4caf50; display: flex; align-items: center; gap: 4px;">
+                        <span style="width: 6px; height: 6px; background: #4caf50; border-radius: 50%; display: inline-block;"></span> Online
+                    </span>
+                </div>
+            </div>
+            <button class="chatbot-close" id="chatbotClose" aria-label="Tutup Chat">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chatbot-msg chatbot-msg--bot">
+                <div class="chatbot-bubble">
+                    Halo! Saya asisten virtual cerdas IF Barber. Ada yang bisa saya bantu terkait jadwal, layanan, atau harga kami?
+                </div>
+            </div>
+        </div>
+        <div class="chatbot-footer">
+            <form id="chatbotForm" style="display: flex; gap: 10px; width: 100%;">
+                <input type="text" id="chatbotInput" class="chatbot-input" placeholder="Tulis pertanyaan Anda..." autocomplete="off">
+                <button type="submit" class="chatbot-send" aria-label="Kirim">
+                    <i data-lucide="send" style="width: 16px; height: 16px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="<?= BASE_URL ?>/assets/js/main.js"></script>
+    <script src="<?= BASE_URL ?>/assets/js/chatbot.js"></script>
 
     <!-- Init Lucide Icons -->
     <script>

@@ -61,6 +61,13 @@ if (!isset($activePage)) $activePage = 'home';
                 <li><a href="<?= BASE_URL ?>/#barbers" class="navbar__link">Barbers</a></li>
                 <li><a href="<?= BASE_URL ?>/#gallery" class="navbar__link">Gallery</a></li>
                 <li><a href="<?= BASE_URL ?>/#contact" class="navbar__link">Contact</a></li>
+                
+                <?php if (function_exists('isMemberLoggedIn') && isMemberLoggedIn()): ?>
+                    <li><a href="<?= BASE_URL ?>/member/dashboard.php" class="navbar__link <?= $activePage === 'member' ? 'active' : '' ?>">Akun Saya</a></li>
+                <?php else: ?>
+                    <li><a href="<?= BASE_URL ?>/member/login.php" class="navbar__link <?= $activePage === 'member' ? 'active' : '' ?>">Login</a></li>
+                <?php endif; ?>
+
                 <li>
                     <a href="<?= BASE_URL ?>/booking.php" class="btn btn--primary btn--sm <?= $activePage === 'booking' ? '' : '' ?>">
                         Book Now
