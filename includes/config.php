@@ -54,6 +54,14 @@ define('SLOT_INTERVAL', 30); // menit per slot
 // Hari Operasional (0=Minggu, 1=Senin, ..., 6=Sabtu)
 define('HARI_LIBUR', [0]); // Libur hari Minggu
 
+// Membership Tier (berdasarkan total poin sepanjang waktu)
+define('TIER_SILVER_MIN', 200);
+define('TIER_GOLD_MIN', 500);
+define('TIER_PLATINUM_MIN', 1000);
+
+// Poin: 1 poin per Rp 1.000
+define('POIN_PER_RUPIAH', 1000);
+
 // ============================================
 // KONEKSI DATABASE (XAMPP)
 // ============================================

@@ -64,6 +64,11 @@ if (!isset($activePage)) {
                     <i data-lucide="scissors"></i>
                     <span>Kelola Layanan</span>
                 </a>
+
+                <a href="<?= BASE_URL ?>/admin/rewards.php" class="admin-sidebar__link <?= $activePage === 'rewards' ? 'active' : '' ?>">
+                    <i data-lucide="gift"></i>
+                    <span>Kelola Rewards</span>
+                </a>
             </nav>
 
             <div class="admin-sidebar__footer">

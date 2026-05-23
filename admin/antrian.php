@@ -36,7 +36,23 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             $stmt = $conn->prepare("UPDATE booking SET status = 'Selesai' WHERE id = ?");
             $stmt->bind_param('i', $id);
             if ($stmt->execute()) {
-                setFlash('success', 'Antrean #' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' telah selesai.');
+                // Auto-assign poin jika booking milik member
+                $poinStmt = $conn->prepare("SELECT member_id, total_harga FROM booking WHERE id = ?");
+                $poinStmt->bind_param('i', $id);
+                $poinStmt->execute();
+                $bookingData = $poinStmt->get_result()->fetch_assoc();
+                $poinStmt->close();
+
+                $poinMsg = '';
+                if ($bookingData && $bookingData['member_id']) {
+                    $poinEarned = hitungPoinBooking($bookingData['total_harga']);
+                    if ($poinEarned > 0) {
+                        addPoin($conn, $bookingData['member_id'], $id, $poinEarned, 'Poin dari booking #' . str_pad($id, 4, '0', STR_PAD_LEFT));
+                        $poinMsg = ' (+' . $poinEarned . ' poin untuk member)';
+                    }
+                }
+
+                setFlash('success', 'Antrean #' . str_pad($id, 4, '0', STR_PAD_LEFT) . ' telah selesai.' . $poinMsg);
             } else {
                 setFlash('error', 'Gagal menyelesaikan antrean.');
             }

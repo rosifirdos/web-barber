@@ -60,7 +60,68 @@ CREATE TABLE IF NOT EXISTS member (
     email VARCHAR(100) UNIQUE NOT NULL,
     no_hp VARCHAR(20) NOT NULL,
     password VARCHAR(255) NOT NULL,
+    total_poin INT DEFAULT 0,
+    tier ENUM('Bronze','Silver','Gold','Platinum') DEFAULT 'Bronze',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ============================================
+-- TABEL: poin_history
+-- Mencatat transaksi perolehan dan penukaran poin
+-- ============================================
+CREATE TABLE IF NOT EXISTS poin_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    booking_id INT DEFAULT NULL,
+    jenis ENUM('Dapat','Redeem') NOT NULL,
+    jumlah INT NOT NULL,
+    saldo_akhir INT NOT NULL DEFAULT 0,
+    keterangan VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (member_id) REFERENCES member(id) ON DELETE CASCADE,
+    FOREIGN KEY (booking_id) REFERENCES booking(id) ON DELETE SET NULL,
+    INDEX idx_member (member_id),
+    INDEX idx_jenis (jenis)
+) ENGINE=InnoDB;
+
+-- ============================================
+-- TABEL: rewards
+-- Katalog hadiah/benefit untuk member
+-- ============================================
+CREATE TABLE IF NOT EXISTS rewards (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nama VARCHAR(100) NOT NULL,
+    deskripsi TEXT,
+    poin_diperlukan INT NOT NULL,
+    jenis ENUM('Diskon','Layanan Gratis','Voucher') DEFAULT 'Diskon',
+    nilai_diskon DECIMAL(5,2) DEFAULT NULL,
+    layanan_id INT DEFAULT NULL,
+    icon VARCHAR(50) DEFAULT 'gift',
+    is_active TINYINT(1) DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (layanan_id) REFERENCES layanan(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ============================================
+-- TABEL: reward_claims
+-- Riwayat klaim dan voucher member
+-- ============================================
+CREATE TABLE IF NOT EXISTS reward_claims (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    reward_id INT NOT NULL,
+    poin_digunakan INT NOT NULL,
+    status ENUM('Aktif','Terpakai','Kadaluarsa') DEFAULT 'Aktif',
+    kode_voucher VARCHAR(20) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expired_at DATETIME DEFAULT NULL,
+    used_at DATETIME DEFAULT NULL,
+    FOREIGN KEY (member_id) REFERENCES member(id) ON DELETE CASCADE,
+    FOREIGN KEY (reward_id) REFERENCES rewards(id) ON DELETE RESTRICT,
+    INDEX idx_member (member_id),
+    INDEX idx_status (status),
+    INDEX idx_kode (kode_voucher)
 ) ENGINE=InnoDB;
 
 -- ============================================

@@ -208,3 +208,240 @@ function generateNomorAntrean() {
 function e($string) {
     return htmlspecialchars($string ?? '', ENT_QUOTES, 'UTF-8');
 }
+
+// ============================================
+// SISTEM POIN & MEMBERSHIP
+// ============================================
+
+/**
+ * Hitung tier berdasarkan total poin yang pernah dikumpulkan
+ */
+function hitungTier($totalPoinEarned) {
+    if ($totalPoinEarned >= TIER_PLATINUM_MIN) return 'Platinum';
+    if ($totalPoinEarned >= TIER_GOLD_MIN) return 'Gold';
+    if ($totalPoinEarned >= TIER_SILVER_MIN) return 'Silver';
+    return 'Bronze';
+}
+
+/**
+ * Ambil total poin earned sepanjang waktu (untuk hitung tier)
+ */
+function getTotalPoinEarned($conn, $memberId) {
+    $stmt = $conn->prepare("SELECT COALESCE(SUM(jumlah), 0) as total FROM poin_history WHERE member_id = ? AND jenis = 'Dapat'");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return (int)$result['total'];
+}
+
+/**
+ * Update tier member berdasarkan total poin earned
+ */
+function updateMemberTier($conn, $memberId) {
+    $totalEarned = getTotalPoinEarned($conn, $memberId);
+    $tier = hitungTier($totalEarned);
+    $stmt = $conn->prepare("UPDATE member SET tier = ? WHERE id = ?");
+    $stmt->bind_param('si', $tier, $memberId);
+    $stmt->execute();
+    $stmt->close();
+    return $tier;
+}
+
+/**
+ * Tambah poin ke member
+ */
+function addPoin($conn, $memberId, $bookingId, $jumlah, $keterangan = '') {
+    // Update saldo poin
+    $stmt = $conn->prepare("UPDATE member SET total_poin = total_poin + ? WHERE id = ?");
+    $stmt->bind_param('ii', $jumlah, $memberId);
+    $stmt->execute();
+    $stmt->close();
+
+    // Ambil saldo akhir
+    $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $saldo = $stmt->get_result()->fetch_assoc()['total_poin'];
+    $stmt->close();
+
+    // Catat history
+    $stmt = $conn->prepare("INSERT INTO poin_history (member_id, booking_id, jenis, jumlah, saldo_akhir, keterangan) VALUES (?, ?, 'Dapat', ?, ?, ?)");
+    $stmt->bind_param('iiiis', $memberId, $bookingId, $jumlah, $saldo, $keterangan);
+    $stmt->execute();
+    $stmt->close();
+
+    // Update tier
+    updateMemberTier($conn, $memberId);
+
+    return $saldo;
+}
+
+/**
+ * Redeem poin untuk reward
+ * @return array ['success' => bool, 'message' => string, 'kode_voucher' => string|null]
+ */
+function redeemPoin($conn, $memberId, $rewardId) {
+    // Ambil info reward
+    $stmt = $conn->prepare("SELECT * FROM rewards WHERE id = ? AND is_active = 1");
+    $stmt->bind_param('i', $rewardId);
+    $stmt->execute();
+    $reward = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if (!$reward) {
+        return ['success' => false, 'message' => 'Reward tidak ditemukan.'];
+    }
+
+    // Cek saldo poin
+    $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $member = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+
+    if ($member['total_poin'] < $reward['poin_diperlukan']) {
+        return ['success' => false, 'message' => 'Poin tidak mencukupi. Butuh ' . $reward['poin_diperlukan'] . ' poin.'];
+    }
+
+    // Kurangi poin
+    $poinUsed = $reward['poin_diperlukan'];
+    $stmt = $conn->prepare("UPDATE member SET total_poin = total_poin - ? WHERE id = ?");
+    $stmt->bind_param('ii', $poinUsed, $memberId);
+    $stmt->execute();
+    $stmt->close();
+
+    // Ambil saldo akhir
+    $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $saldo = $stmt->get_result()->fetch_assoc()['total_poin'];
+    $stmt->close();
+
+    // Catat history redeem
+    $stmt = $conn->prepare("INSERT INTO poin_history (member_id, booking_id, jenis, jumlah, saldo_akhir, keterangan) VALUES (?, NULL, 'Redeem', ?, ?, ?)");
+    $keterangan = 'Tukar: ' . $reward['nama'];
+    $stmt->bind_param('iiis', $memberId, $poinUsed, $saldo, $keterangan);
+    $stmt->execute();
+    $stmt->close();
+
+    // Generate voucher
+    $kodeVoucher = generateKodeVoucher();
+    $expiredAt = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+    $stmt = $conn->prepare("INSERT INTO reward_claims (member_id, reward_id, poin_digunakan, kode_voucher, expired_at) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param('iiiis', $memberId, $rewardId, $poinUsed, $kodeVoucher, $expiredAt);
+    $stmt->execute();
+    $stmt->close();
+
+    return [
+        'success' => true,
+        'message' => 'Berhasil menukar ' . $reward['nama'] . '!',
+        'kode_voucher' => $kodeVoucher
+    ];
+}
+
+/**
+ * Ambil total poin member saat ini
+ */
+function getMemberPoin($conn, $memberId) {
+    $stmt = $conn->prepare("SELECT total_poin, tier FROM member WHERE id = ?");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $result;
+}
+
+/**
+ * Ambil riwayat poin member
+ */
+function getPoinHistory($conn, $memberId, $limit = 20) {
+    $stmt = $conn->prepare("SELECT ph.*, b.tanggal as booking_tanggal, l.nama as nama_layanan
+                            FROM poin_history ph
+                            LEFT JOIN booking b ON ph.booking_id = b.id
+                            LEFT JOIN layanan l ON b.layanan_id = l.id
+                            WHERE ph.member_id = ?
+                            ORDER BY ph.created_at DESC
+                            LIMIT ?");
+    $stmt->bind_param('ii', $memberId, $limit);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $result;
+}
+
+/**
+ * Ambil daftar reward aktif
+ */
+function getAvailableRewards($conn) {
+    $result = $conn->query("SELECT r.*, l.nama as nama_layanan FROM rewards r LEFT JOIN layanan l ON r.layanan_id = l.id WHERE r.is_active = 1 ORDER BY r.poin_diperlukan ASC");
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * Ambil semua reward (untuk admin)
+ */
+function getAllRewards($conn) {
+    $result = $conn->query("SELECT r.*, l.nama as nama_layanan FROM rewards r LEFT JOIN layanan l ON r.layanan_id = l.id ORDER BY r.poin_diperlukan ASC");
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+/**
+ * Ambil reward claims member
+ */
+function getMemberClaims($conn, $memberId) {
+    $stmt = $conn->prepare("SELECT rc.*, r.nama as reward_nama, r.jenis as reward_jenis, r.nilai_diskon, r.icon
+                            FROM reward_claims rc
+                            JOIN rewards r ON rc.reward_id = r.id
+                            WHERE rc.member_id = ?
+                            ORDER BY rc.created_at DESC");
+    $stmt->bind_param('i', $memberId);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $stmt->close();
+    return $result;
+}
+
+/**
+ * Generate kode voucher unik
+ */
+function generateKodeVoucher() {
+    return 'IFB-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+}
+
+/**
+ * Hitung poin dari booking
+ */
+function hitungPoinBooking($totalHarga) {
+    return (int)floor($totalHarga / POIN_PER_RUPIAH);
+}
+
+/**
+ * Info tier berikutnya
+ */
+function getNextTierInfo($currentTier, $totalPoinEarned) {
+    switch ($currentTier) {
+        case 'Bronze':
+            return ['next' => 'Silver', 'needed' => TIER_SILVER_MIN - $totalPoinEarned, 'target' => TIER_SILVER_MIN];
+        case 'Silver':
+            return ['next' => 'Gold', 'needed' => TIER_GOLD_MIN - $totalPoinEarned, 'target' => TIER_GOLD_MIN];
+        case 'Gold':
+            return ['next' => 'Platinum', 'needed' => TIER_PLATINUM_MIN - $totalPoinEarned, 'target' => TIER_PLATINUM_MIN];
+        default:
+            return ['next' => null, 'needed' => 0, 'target' => 0];
+    }
+}
+
+/**
+ * Warna tier
+ */
+function getTierColor($tier) {
+    switch ($tier) {
+        case 'Bronze': return '#cd7f32';
+        case 'Silver': return '#c0c0c0';
+        case 'Gold': return '#ffd700';
+        case 'Platinum': return '#e5e4e2';
+        default: return '#cd7f32';
+    }
+}
