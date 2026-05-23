@@ -118,7 +118,9 @@ require_once BASE_PATH . '/includes/header.php';
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn--primary btn--full">Daftar Sekarang</button>
+                <div style="text-align: center;">
+                    <button type="submit" class="btn btn--primary" style="padding-left: 3rem; padding-right: 3rem;">Daftar Sekarang</button>
+                </div>
             </form>
 
             <div style="text-align: center; margin-top: var(--space-lg); font-size: var(--text-sm); color: var(--color-text-muted);">
