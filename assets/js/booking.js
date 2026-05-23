@@ -208,7 +208,8 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderTimeSlots(bookedSlots) {
         try {
             if (!timeslotGrid) return;
-            if (typeof ALL_TIMESLOTS === 'undefined' || !ALL_TIMESLOTS) {
+            var slots = window.ALL_TIMESLOTS;
+            if (!slots || !Array.isArray(slots) || slots.length === 0) {
                 timeslotGrid.innerHTML = '<div class="timeslot-empty"><p>Error memuat jam operasional.</p></div>';
                 return;
             }
@@ -221,7 +222,7 @@ document.addEventListener('DOMContentLoaded', function () {
             var currentMin = now.getMinutes();
 
             var html = '';
-            ALL_TIMESLOTS.forEach(function (slot) {
+            slots.forEach(function (slot) {
                 var isBooked = (bookedSlots || []).indexOf(slot) !== -1;
 
                 // If today, disable past time slots

@@ -7,6 +7,7 @@
  * Response: JSON { "booked": ["09:00", "10:30", ...] }
  */
 
+ob_start(); // Buffer output to prevent stray whitespace/BOM
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
@@ -38,7 +39,7 @@ if (isHariLibur($tanggal)) {
 // Get booked slots
 $bookedSlots = getBookedSlots($conn, $barberId, $tanggal);
 
-ob_clean(); // Prevent any accidental output/BOM from corrupting JSON
+ob_end_clean(); // Discard any accidental output, then send clean JSON
 echo json_encode([
     'booked' => $bookedSlots,
     'tanggal' => $tanggal,
