@@ -407,6 +407,26 @@
     box-shadow: 0 0 0 3px var(--color-accent-glow);
 }
 
+.form-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.form-icon {
+    position: absolute;
+    left: 16px;
+    color: var(--color-text-muted);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.form-input-wrapper .form-input {
+    padding-left: 48px;
+}
+
 .form-input::placeholder {
     color: var(--color-text-muted);
 }

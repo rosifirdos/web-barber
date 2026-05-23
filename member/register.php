@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 require_once BASE_PATH . '/includes/header.php';
 ?>
 
-<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: var(--space-xl) var(--space-md); background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-card) 100%);">
+<div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: calc(var(--navbar-height) + var(--space-xl)) var(--space-md) var(--space-xl); background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-card) 100%);">
     <div class="card" style="width: 100%; max-width: 450px;">
         <div style="text-align: center; margin-bottom: var(--space-lg);">
             <h1 style="font-family: var(--font-heading); color: var(--color-accent); margin-bottom: var(--space-xs);">Daftar Member</h1>
