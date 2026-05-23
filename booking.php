@@ -471,6 +471,6 @@ include __DIR__ . '/includes/header.php';
     var ALL_TIMESLOTS = <?= json_encode(generateTimeSlots()) ?>;
     var BASE_URL = '<?= BASE_URL ?>';
 </script>
-<script src="<?= BASE_URL ?>/assets/js/booking.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/booking.js?v=<?= time() ?>"></script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

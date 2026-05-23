@@ -208,10 +208,16 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderTimeSlots(bookedSlots) {
         try {
             if (!timeslotGrid) return;
+
+            // Try to get timeslots from PHP-generated global, fallback to JS generation
             var slots = window.ALL_TIMESLOTS;
             if (!slots || !Array.isArray(slots) || slots.length === 0) {
-                timeslotGrid.innerHTML = '<div class="timeslot-empty"><p>Error memuat jam operasional.</p></div>';
-                return;
+                // Fallback: generate 09:00 - 21:00 with 30min intervals in JS
+                slots = [];
+                for (var h = 9; h < 21; h++) {
+                    slots.push(String(h).padStart(2, '0') + ':00');
+                    slots.push(String(h).padStart(2, '0') + ':30');
+                }
             }
 
             var now = new Date();
