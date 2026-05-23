@@ -11,6 +11,7 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 require_once dirname(__DIR__) . '/includes/config.php';
+session_write_close(); // Prevent session locking for concurrent requests
 require_once dirname(__DIR__) . '/includes/functions.php';
 
 $barberId = isset($_GET['barber_id']) ? (int)$_GET['barber_id'] : 0;
@@ -37,6 +38,7 @@ if (isHariLibur($tanggal)) {
 // Get booked slots
 $bookedSlots = getBookedSlots($conn, $barberId, $tanggal);
 
+ob_clean(); // Prevent any accidental output/BOM from corrupting JSON
 echo json_encode([
     'booked' => $bookedSlots,
     'tanggal' => $tanggal,

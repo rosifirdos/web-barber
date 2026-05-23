@@ -183,7 +183,10 @@ document.addEventListener('DOMContentLoaded', function () {
             // Fetch booked slots
             var barberId = selectedData.barber || 0;
             fetch(BASE_URL + '/api/get_slots.php?barber_id=' + barberId + '&tanggal=' + tanggal)
-                .then(function (res) { return res.json(); })
+                .then(function (res) {
+                    if (!res.ok) throw new Error('HTTP error ' + res.status);
+                    return res.json();
+                })
                 .then(function (data) {
                     if (data.closed) {
                         timeslotGrid.innerHTML = '<div class="timeslot-empty">' +
@@ -194,62 +197,74 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     renderTimeSlots(data.booked || []);
                 })
-                .catch(function () {
-                    // Fallback: render all slots as available
+                .catch(function (err) {
+                    console.error('API Error:', err);
+                    // Fallback: render all slots as available, or show error
                     renderTimeSlots([]);
                 });
         });
     }
 
     function renderTimeSlots(bookedSlots) {
-        if (!timeslotGrid || !ALL_TIMESLOTS) return;
-
-        var now = new Date();
-        var isToday = selectedData.tanggal === now.toISOString().split('T')[0];
-        var currentHour = now.getHours();
-        var currentMin = now.getMinutes();
-
-        var html = '';
-        ALL_TIMESLOTS.forEach(function (slot) {
-            var isBooked = bookedSlots.indexOf(slot) !== -1;
-
-            // If today, disable past time slots
-            var isPast = false;
-            if (isToday) {
-                var parts = slot.split(':');
-                var slotHour = parseInt(parts[0]);
-                var slotMin = parseInt(parts[1]);
-                if (slotHour < currentHour || (slotHour === currentHour && slotMin <= currentMin)) {
-                    isPast = true;
-                }
+        try {
+            if (!timeslotGrid) return;
+            if (typeof ALL_TIMESLOTS === 'undefined' || !ALL_TIMESLOTS) {
+                timeslotGrid.innerHTML = '<div class="timeslot-empty"><p>Error memuat jam operasional.</p></div>';
+                return;
             }
 
-            var disabledClass = (isBooked || isPast) ? ' timeslot--disabled' : '';
-            var label = isBooked ? 'Terisi' : (isPast ? 'Lewat' : slot);
+            var now = new Date();
+            // Get local date as YYYY-MM-DD instead of UTC
+            var localDateStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+            var isToday = selectedData.tanggal === localDateStr;
+            var currentHour = now.getHours();
+            var currentMin = now.getMinutes();
 
-            html += '<button type="button" class="timeslot' + disabledClass + '" ' +
-                'data-time="' + slot + '" ' +
-                (isBooked || isPast ? 'disabled' : '') + '>' +
-                '<span class="timeslot__time">' + slot + '</span>' +
-                '<span class="timeslot__status">' + label + '</span>' +
-                '</button>';
-        });
+            var html = '';
+            ALL_TIMESLOTS.forEach(function (slot) {
+                var isBooked = (bookedSlots || []).indexOf(slot) !== -1;
 
-        timeslotGrid.innerHTML = html;
+                // If today, disable past time slots
+                var isPast = false;
+                if (isToday) {
+                    var parts = slot.split(':');
+                    var slotHour = parseInt(parts[0]);
+                    var slotMin = parseInt(parts[1]);
+                    if (slotHour < currentHour || (slotHour === currentHour && slotMin <= currentMin)) {
+                        isPast = true;
+                    }
+                }
 
-        // Bind click
-        timeslotGrid.querySelectorAll('.timeslot:not(.timeslot--disabled)').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                // Deselect all
-                timeslotGrid.querySelectorAll('.timeslot').forEach(function (b) {
-                    b.classList.remove('timeslot--selected');
-                });
-                this.classList.add('timeslot--selected');
-                selectedData.jam = this.dataset.time;
-                if (jamInput) jamInput.value = this.dataset.time;
-                if (btnStep3) btnStep3.disabled = false;
+                var disabledClass = (isBooked || isPast) ? ' timeslot--disabled' : '';
+                var label = isBooked ? 'Terisi' : (isPast ? 'Lewat' : slot);
+
+                html += '<button type="button" class="timeslot' + disabledClass + '" ' +
+                    'data-time="' + slot + '" ' +
+                    (isBooked || isPast ? 'disabled' : '') + '>' +
+                    '<span class="timeslot__time">' + slot + '</span>' +
+                    '<span class="timeslot__status">' + label + '</span>' +
+                    '</button>';
             });
-        });
+
+            timeslotGrid.innerHTML = html;
+
+            // Bind click
+            timeslotGrid.querySelectorAll('.timeslot:not(.timeslot--disabled)').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    // Deselect all
+                    timeslotGrid.querySelectorAll('.timeslot').forEach(function (b) {
+                        b.classList.remove('timeslot--selected');
+                    });
+                    this.classList.add('timeslot--selected');
+                    selectedData.jam = this.dataset.time;
+                    if (jamInput) jamInput.value = this.dataset.time;
+                    if (btnStep3) btnStep3.disabled = false;
+                });
+            });
+        } catch (e) {
+            console.error("Render TimeSlots Error:", e);
+            timeslotGrid.innerHTML = '<div class="timeslot-empty"><p>Terjadi kesalahan sistem saat memuat jadwal.</p></div>';
+        }
     }
 
     // ============================================
