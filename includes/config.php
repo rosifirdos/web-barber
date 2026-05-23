@@ -19,8 +19,32 @@ define('APP_TAGLINE', 'Premium Grooming Experience');
 define('APP_VERSION', '1.0.0');
 
 // URL & Path
-define('BASE_URL', 'http://localhost/web_barber');
 define('BASE_PATH', dirname(__DIR__));
+
+// ============================================
+// LOAD ENVIRONMENT VARIABLES (.env)
+// ============================================
+if (file_exists(BASE_PATH . '/.env')) {
+    $envLines = file(BASE_PATH . '/.env', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($envLines as $line) {
+        if (strpos(trim($line), '#') === 0) {
+            continue;
+        }
+        $parts = explode('=', $line, 2);
+        if (count($parts) === 2) {
+            $key = trim($parts[0]);
+            $val = trim($parts[1]);
+            $val = trim($val, '"\'');
+            if (!empty($key)) {
+                putenv("$key=$val");
+                $_ENV[$key] = $val;
+                $_SERVER[$key] = $val;
+            }
+        }
+    }
+}
+
+define('BASE_URL', getenv('BASE_URL') ?: 'http://localhost/web_barber');
 
 // Jam Operasional
 define('JAM_BUKA', '09:00');
@@ -33,10 +57,10 @@ define('HARI_LIBUR', [0]); // Libur hari Minggu
 // ============================================
 // KONEKSI DATABASE (XAMPP)
 // ============================================
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'if_barber');
+define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB_PASS') : '');
+define('DB_NAME', getenv('DB_NAME') ?: 'if_barber');
 
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
@@ -58,5 +82,5 @@ date_default_timezone_set('Asia/Jakarta');
 // ============================================
 // GEMINI API (untuk Chatbot — Sesi 6)
 // ============================================
-define('GEMINI_API_KEY', 'AIzaSyB2yM3k-3fcUiXEO2h393jG6cTXck8wiqQ'); // Isi API key di sini nanti
-define('GEMINI_MODEL', 'gemini-2.0-flash');
+define('GEMINI_API_KEY', getenv('GEMINI_API_KEY') ?: '');
+define('GEMINI_MODEL', getenv('GEMINI_MODEL') ?: 'gemini-2.0-flash');

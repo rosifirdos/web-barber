@@ -543,6 +543,14 @@ body {
     transform: translateY(20px);
     transition: transform var(--transition-base);
     box-shadow: var(--shadow-xl);
+    overflow: hidden;
+}
+
+.admin-modal__container form {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-height: 90vh;
 }
 
 .admin-modal.active .admin-modal__container {
