@@ -79,43 +79,43 @@ require_once BASE_PATH . '/includes/header.php';
 
             <form method="POST" action="">
                 <div class="form-group">
-                    <label class="form-label" for="nama">Nama Lengkap</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="user" class="form-icon"></i>
-                        <input type="text" id="nama" name="nama" class="form-input" value="<?= htmlspecialchars($nama) ?>" placeholder="Masukkan nama lengkap" required>
-                    </div>
+                    <label class="form-label" for="nama" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="user" style="width: 16px; height: 16px;"></i>
+                        Nama Lengkap
+                    </label>
+                    <input type="text" id="nama" name="nama" class="form-input" value="<?= htmlspecialchars($nama) ?>" placeholder="Masukkan nama lengkap" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="mail" class="form-icon"></i>
-                        <input type="email" id="email" name="email" class="form-input" value="<?= htmlspecialchars($email) ?>" placeholder="contoh@email.com" required>
-                    </div>
+                    <label class="form-label" for="email" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email" class="form-input" value="<?= htmlspecialchars($email) ?>" placeholder="contoh@email.com" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="no_hp">Nomor HP</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="phone" class="form-icon"></i>
-                        <input type="text" id="no_hp" name="no_hp" class="form-input" value="<?= htmlspecialchars($no_hp) ?>" placeholder="08xxxxxx" required>
-                    </div>
+                    <label class="form-label" for="no_hp" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="phone" style="width: 16px; height: 16px;"></i>
+                        Nomor HP
+                    </label>
+                    <input type="text" id="no_hp" name="no_hp" class="form-input" value="<?= htmlspecialchars($no_hp) ?>" placeholder="08xxxxxx" required>
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label" for="password">Password</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="lock" class="form-icon"></i>
-                        <input type="password" id="password" name="password" class="form-input" placeholder="Minimal 6 karakter" required>
-                    </div>
+                    <label class="form-label" for="password" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+                        Password
+                    </label>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Minimal 6 karakter" required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: var(--space-xl);">
-                    <label class="form-label" for="confirm_password">Konfirmasi Password</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="check-circle" class="form-icon"></i>
-                        <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Ulangi password" required>
-                    </div>
+                    <label class="form-label" for="confirm_password" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                        Konfirmasi Password
+                    </label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Ulangi password" required>
                 </div>
 
                 <div style="text-align: center;">

@@ -67,19 +67,19 @@ require_once BASE_PATH . '/includes/header.php';
 
             <form method="POST" action="">
                 <div class="form-group">
-                    <label class="form-label" for="email">Email</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="mail" class="form-icon"></i>
-                        <input type="email" id="email" name="email" class="form-input" placeholder="contoh@email.com" required>
-                    </div>
+                    <label class="form-label" for="email" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
+                        Email
+                    </label>
+                    <input type="email" id="email" name="email" class="form-input" placeholder="contoh@email.com" required>
                 </div>
 
                 <div class="form-group" style="margin-bottom: var(--space-xl);">
-                    <label class="form-label" for="password">Password</label>
-                    <div class="form-input-wrapper">
-                        <i data-lucide="lock" class="form-icon"></i>
-                        <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
-                    </div>
+                    <label class="form-label" for="password" style="display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="lock" style="width: 16px; height: 16px;"></i>
+                        Password
+                    </label>
+                    <input type="password" id="password" name="password" class="form-input" placeholder="••••••••" required>
                 </div>
 
                 <div style="text-align: center;">
