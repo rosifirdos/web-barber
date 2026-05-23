@@ -61,67 +61,69 @@ require_once BASE_PATH . '/includes/header.php';
 
 <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: calc(var(--navbar-height) + var(--space-xl)) var(--space-md) var(--space-xl); background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-card) 100%);">
     <div class="card" style="width: 100%; max-width: 450px;">
-        <div style="text-align: center; margin-bottom: var(--space-lg);">
-            <h1 style="font-family: var(--font-heading); color: var(--color-accent); margin-bottom: var(--space-xs);">Daftar Member</h1>
-            <p style="color: var(--color-text-muted);">Gabung dengan IF Barber untuk kemudahan booking.</p>
-        </div>
-
-        <?php if (!empty($errors)): ?>
-            <div style="background: rgba(220, 53, 69, 0.1); border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
-                <ul style="margin: 0; padding-left: 20px; color: #ff8787; font-size: 14px;">
-                    <?php foreach ($errors as $error): ?>
-                        <li><?= e($error) ?></li>
-                    <?php endforeach; ?>
-                </ul>
+        <div class="card__body">
+            <div style="text-align: center; margin-bottom: var(--space-lg);">
+                <h1 style="font-family: var(--font-heading); color: var(--color-accent); margin-bottom: var(--space-xs);">Daftar Member</h1>
+                <p style="color: var(--color-text-muted);">Gabung dengan IF Barber untuk kemudahan booking.</p>
             </div>
-        <?php endif; ?>
 
-        <form method="POST" action="">
-            <div class="form-group">
-                <label class="form-label" for="nama">Nama Lengkap</label>
-                <div class="form-input-wrapper">
-                    <i data-lucide="user" class="form-icon"></i>
-                    <input type="text" id="nama" name="nama" class="form-input" value="<?= htmlspecialchars($nama) ?>" placeholder="Masukkan nama lengkap" required>
+            <?php if (!empty($errors)): ?>
+                <div style="background: rgba(220, 53, 69, 0.1); border-left: 4px solid #dc3545; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    <ul style="margin: 0; padding-left: 20px; color: #ff8787; font-size: 14px;">
+                        <?php foreach ($errors as $error): ?>
+                            <li><?= e($error) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
-            </div>
+            <?php endif; ?>
 
-            <div class="form-group">
-                <label class="form-label" for="email">Email</label>
-                <div class="form-input-wrapper">
-                    <i data-lucide="mail" class="form-icon"></i>
-                    <input type="email" id="email" name="email" class="form-input" value="<?= htmlspecialchars($email) ?>" placeholder="contoh@email.com" required>
+            <form method="POST" action="">
+                <div class="form-group">
+                    <label class="form-label" for="nama">Nama Lengkap</label>
+                    <div class="form-input-wrapper">
+                        <i data-lucide="user" class="form-icon"></i>
+                        <input type="text" id="nama" name="nama" class="form-input" value="<?= htmlspecialchars($nama) ?>" placeholder="Masukkan nama lengkap" required>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label class="form-label" for="no_hp">Nomor HP</label>
-                <div class="form-input-wrapper">
-                    <i data-lucide="phone" class="form-icon"></i>
-                    <input type="text" id="no_hp" name="no_hp" class="form-input" value="<?= htmlspecialchars($no_hp) ?>" placeholder="08xxxxxx" required>
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <div class="form-input-wrapper">
+                        <i data-lucide="mail" class="form-icon"></i>
+                        <input type="email" id="email" name="email" class="form-input" value="<?= htmlspecialchars($email) ?>" placeholder="contoh@email.com" required>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <div class="form-input-wrapper">
-                    <i data-lucide="lock" class="form-icon"></i>
-                    <input type="password" id="password" name="password" class="form-input" placeholder="Minimal 6 karakter" required>
+                <div class="form-group">
+                    <label class="form-label" for="no_hp">Nomor HP</label>
+                    <div class="form-input-wrapper">
+                        <i data-lucide="phone" class="form-icon"></i>
+                        <input type="text" id="no_hp" name="no_hp" class="form-input" value="<?= htmlspecialchars($no_hp) ?>" placeholder="08xxxxxx" required>
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group" style="margin-bottom: var(--space-xl);">
-                <label class="form-label" for="confirm_password">Konfirmasi Password</label>
-                <div class="form-input-wrapper">
-                    <i data-lucide="check-circle" class="form-icon"></i>
-                    <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Ulangi password" required>
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <div class="form-input-wrapper">
+                        <i data-lucide="lock" class="form-icon"></i>
+                        <input type="password" id="password" name="password" class="form-input" placeholder="Minimal 6 karakter" required>
+                    </div>
                 </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-xl);">
+                    <label class="form-label" for="confirm_password">Konfirmasi Password</label>
+                    <div class="form-input-wrapper">
+                        <i data-lucide="check-circle" class="form-icon"></i>
+                        <input type="password" id="confirm_password" name="confirm_password" class="form-input" placeholder="Ulangi password" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn--full">Daftar Sekarang</button>
+            </form>
+
+            <div style="text-align: center; margin-top: var(--space-lg); font-size: var(--text-sm); color: var(--color-text-muted);">
+                Sudah punya akun? <a href="<?= BASE_URL ?>/member/login.php" style="color: var(--color-accent); font-weight: 500;">Login di sini</a>
             </div>
-
-            <button type="submit" class="btn btn--primary btn--full">Daftar Sekarang</button>
-        </form>
-
-        <div style="text-align: center; margin-top: var(--space-lg); font-size: var(--text-sm); color: var(--color-text-muted);">
-            Sudah punya akun? <a href="<?= BASE_URL ?>/member/login.php" style="color: var(--color-accent); font-weight: 500;">Login di sini</a>
         </div>
     </div>
 </div>
