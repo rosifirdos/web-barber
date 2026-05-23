@@ -38,7 +38,7 @@ $stmt->close();
 require_once BASE_PATH . '/includes/header.php';
 ?>
 
-<div style="min-height: 80vh; padding: var(--space-xl) var(--space-md); background: var(--bg-dark);">
+<div style="min-height: 80vh; padding: calc(var(--navbar-height, 80px) + var(--space-xl)) var(--space-md) var(--space-xl); background: var(--color-bg-primary);">
     <div class="container" style="max-width: 1000px; margin: 0 auto;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg); flex-wrap: wrap; gap: 15px;">
             <div>
@@ -58,23 +58,25 @@ require_once BASE_PATH . '/includes/header.php';
         <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start;">
             <!-- Profil Card -->
             <div class="card">
-                <h3 style="font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Profil Anda</h3>
-                <div style="display: flex; flex-direction: column; gap: 15px;">
-                    <div>
-                        <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Nama Lengkap</div>
-                        <div style="font-weight: 500;"><?= e($member['nama']) ?></div>
-                    </div>
-                    <div>
-                        <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Email</div>
-                        <div style="font-weight: 500;"><?= e($member['email']) ?></div>
-                    </div>
-                    <div>
-                        <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Nomor HP</div>
-                        <div style="font-weight: 500;"><?= e($member['no_hp']) ?></div>
-                    </div>
-                    <div>
-                        <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Member Sejak</div>
-                        <div style="font-weight: 500;"><?= date('d F Y', strtotime($member['created_at'])) ?></div>
+                <div class="card__body">
+                    <h3 style="font-size: 1.2rem; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">Profil Anda</h3>
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div>
+                            <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Nama Lengkap</div>
+                            <div style="font-weight: 500;"><?= e($member['nama']) ?></div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Email</div>
+                            <div style="font-weight: 500;"><?= e($member['email']) ?></div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Nomor HP</div>
+                            <div style="font-weight: 500;"><?= e($member['no_hp']) ?></div>
+                        </div>
+                        <div>
+                            <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Member Sejak</div>
+                            <div style="font-weight: 500;"><?= date('d F Y', strtotime($member['created_at'])) ?></div>
+                        </div>
                     </div>
                 </div>
             </div>
