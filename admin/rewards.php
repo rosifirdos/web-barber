@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $rewards = getAllRewards($conn);
 
 // Fetch Data Layanan (untuk dropdown "Layanan Gratis")
-$layananQuery = $conn->query("SELECT id, nama FROM layanan WHERE status = 'Aktif' ORDER BY nama ASC");
+$layananQuery = $conn->query("SELECT id, nama FROM layanan WHERE is_active = 1 ORDER BY nama ASC");
 $layananOptions = $layananQuery->fetch_all(MYSQLI_ASSOC);
 
 ?>

@@ -55,7 +55,7 @@
                         <li>
                             <span class="footer__link" style="cursor:default;">
                                 <i data-lucide="map-pin" style="width:14px;height:14px;display:inline;vertical-align:middle;margin-right:6px;"></i>
-                                Jl. Contoh No. 123, Kota
+                                Jl. Sidodadi Timur No. 93, Kota Semarang
                             </span>
                         </li>
                         <li>
