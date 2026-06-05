@@ -33,7 +33,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             }
             $stmt->close();
         } elseif ($action === 'selesai') {
-            $stmt = $conn->prepare("UPDATE booking SET status = 'Selesai' WHERE id = ?");
+            $stmt = $conn->prepare("UPDATE booking SET status = 'Selesai', status_pembayaran = 'Lunas' WHERE id = ?");
             $stmt->bind_param('i', $id);
             if ($stmt->execute()) {
                 // Auto-assign poin jika booking milik member
