@@ -71,13 +71,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Insert booking
     if (empty($errors)) {
         $memberId = isMemberLoggedIn() ? $_SESSION['member_id'] : null;
+        $jumlahDp = $totalHarga * 0.5;
+        $waktuExpired = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-        $stmt = $conn->prepare("INSERT INTO booking (nama_pelanggan, no_hp, layanan_id, barber_id, tanggal, jam, status, member_id, total_harga, catatan) VALUES (?, ?, ?, ?, ?, ?, 'Pending', ?, ?, ?)");
-        $stmt->bind_param('ssiissids', $nama, $noHp, $layananId, $barberId, $tanggal, $jam, $memberId, $totalHarga, $catatan);
+        $stmt = $conn->prepare("INSERT INTO booking (nama_pelanggan, no_hp, layanan_id, barber_id, tanggal, jam, waktu_expired, status, status_pembayaran, member_id, total_harga, jumlah_dp, catatan) VALUES (?, ?, ?, ?, ?, ?, ?, 'Pending Payment', 'Belum Bayar', ?, ?, ?, ?)");
+        $stmt->bind_param('ssiisssidds', $nama, $noHp, $layananId, $barberId, $tanggal, $jam, $waktuExpired, $memberId, $totalHarga, $jumlahDp, $catatan);
 
         if ($stmt->execute()) {
             $bookingId = $stmt->insert_id;
-            $success = true;
+            // Redirect to payment page
+            header("Location: " . BASE_URL . "/pembayaran.php?id=" . $bookingId);
+            exit;
         } else {
             $errors[] = 'Terjadi kesalahan saat menyimpan booking. Silakan coba lagi.';
         }

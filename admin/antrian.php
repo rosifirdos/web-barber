@@ -184,10 +184,12 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                 <label style="font-size: var(--text-sm); margin-bottom: 5px; display: block;">Status</label>
                 <select name="status" class="form-input" style="width: 100%;">
                     <option value="">Semua Status</option>
-                    <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                    <option value="Pending Payment" <?= $statusFilter === 'Pending Payment' ? 'selected' : '' ?>>Menunggu Pembayaran</option>
+                    <option value="Confirmed" <?= $statusFilter === 'Confirmed' ? 'selected' : '' ?>>Terkonfirmasi (Sudah DP)</option>
                     <option value="Proses" <?= $statusFilter === 'Proses' ? 'selected' : '' ?>>Proses</option>
                     <option value="Selesai" <?= $statusFilter === 'Selesai' ? 'selected' : '' ?>>Selesai</option>
                     <option value="Batal" <?= $statusFilter === 'Batal' ? 'selected' : '' ?>>Batal</option>
+                    <option value="Expired" <?= $statusFilter === 'Expired' ? 'selected' : '' ?>>Expired</option>
                 </select>
             </div>
             <div class="form-group" style="flex: 1; min-width: 130px;">
@@ -217,7 +219,8 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                         <th>Barber</th>
                         <th>Tanggal & Jam</th>
                         <th>Total Harga</th>
-                        <th>Status</th>
+                        <th>Status Booking</th>
+                        <th>Pembayaran</th>
                         <th style="width: 160px; text-align: center;">Aksi</th>
                     </tr>
                 </thead>
@@ -231,10 +234,11 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                     <?php else: ?>
                         <?php foreach ($bookings as $b): 
                             $statusClass = '';
-                            if ($b['status'] === 'Pending') $statusClass = 'badge--pending';
+                            if ($b['status'] === 'Pending Payment') $statusClass = 'badge--pending';
+                            elseif ($b['status'] === 'Confirmed') $statusClass = 'badge--success';
                             elseif ($b['status'] === 'Proses') $statusClass = 'badge--process';
                             elseif ($b['status'] === 'Selesai') $statusClass = 'badge--success';
-                            elseif ($b['status'] === 'Batal') $statusClass = 'badge--danger';
+                            elseif ($b['status'] === 'Batal' || $b['status'] === 'Expired') $statusClass = 'badge--danger';
 
                             // Format JSON for detail modal
                             $jsonObj = [
@@ -246,6 +250,8 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                                 'tanggal' => formatTanggal($b['tanggal']),
                                 'jam' => formatJam($b['jam']),
                                 'harga' => formatRupiah($b['total_harga']),
+                                'dp' => formatRupiah($b['jumlah_dp']),
+                                'status_pembayaran' => $b['status_pembayaran'],
                                 'catatan' => $b['catatan'] ? $b['catatan'] : '-',
                                 'status' => $b['status'],
                                 'dibuat' => date('d/m/Y H:i', strtotime($b['created_at']))
@@ -266,9 +272,19 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                                     <div style="font-weight: 500;"><?= formatTanggal($b['tanggal']) ?></div>
                                     <div style="font-size: var(--text-xs); color: var(--color-text-muted);"><?= formatJam($b['jam']) ?> WIB</div>
                                 </td>
-                                <td style="font-weight: 600;"><?= formatRupiah($b['total_harga']) ?></td>
+                                <td>
+                                    <div style="font-weight: 600;"><?= formatRupiah($b['total_harga']) ?></div>
+                                    <div style="font-size: var(--text-xs); color: var(--color-accent);">DP: <?= formatRupiah($b['jumlah_dp']) ?></div>
+                                </td>
                                 <td>
                                     <span class="card__badge <?= $statusClass ?>"><?= $b['status'] ?></span>
+                                </td>
+                                <td>
+                                    <?php 
+                                        $payClass = $b['status_pembayaran'] === 'Belum Bayar' ? 'badge--danger' : 
+                                                   ($b['status_pembayaran'] === 'Sudah DP' ? 'badge--pending' : 'badge--success');
+                                    ?>
+                                    <span class="card__badge <?= $payClass ?>"><?= $b['status_pembayaran'] ?></span>
                                 </td>
                                 <td>
                                     <div class="table-actions" style="justify-content: center;">
@@ -278,7 +294,12 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                                         </button>
 
                                         <!-- Quick Status Actions -->
-                                        <?php if ($b['status'] === 'Pending'): ?>
+                                        <?php if ($b['status'] === 'Pending Payment'): ?>
+                                            <!-- Change to Batal -->
+                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
+                                                <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
+                                            </button>
+                                        <?php elseif ($b['status'] === 'Confirmed'): ?>
                                             <!-- Change to Proses -->
                                             <a href="?action=proses&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>" class="btn-action btn-action--process" title="Mulai Proses Cukur">
                                                 <i data-lucide="play" style="width: 15px; height: 15px;"></i>
@@ -387,8 +408,16 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
                     <span class="detail-val" id="modalHarga" style="color: var(--color-accent); font-weight: 700;">-</span>
                 </div>
                 <div class="detail-row">
-                    <span class="detail-label">Status</span>
+                    <span class="detail-label">Status Booking</span>
                     <span class="detail-val"><span class="card__badge" id="modalStatus">-</span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status Pembayaran</span>
+                    <span class="detail-val"><span class="card__badge" id="modalStatusPembayaran">-</span></span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Jumlah DP</span>
+                    <span class="detail-val" id="modalDP" style="color: var(--color-accent); font-weight: 700;">-</span>
                 </div>
                 <div class="detail-row" style="flex-direction: column; align-items: flex-start; gap: 5px;">
                     <span class="detail-label">Catatan Pelanggan:</span>
@@ -426,6 +455,15 @@ function viewDetail(jsonStr) {
     document.getElementById('modalTanggal').innerText = data.tanggal;
     document.getElementById('modalJam').innerText = data.jam + ' WIB';
     document.getElementById('modalHarga').innerText = data.harga;
+    document.getElementById('modalDP').innerText = data.dp;
+    document.getElementById('modalStatusPembayaran').innerText = data.status_pembayaran;
+    
+    var payBadge = document.getElementById('modalStatusPembayaran');
+    payBadge.className = 'card__badge';
+    if (data.status_pembayaran === 'Belum Bayar') payBadge.classList.add('badge--danger');
+    else if (data.status_pembayaran === 'Sudah DP') payBadge.classList.add('badge--pending');
+    else payBadge.classList.add('badge--success');
+
     document.getElementById('modalCatatan').innerText = data.catatan;
     document.getElementById('modalDibuat').innerText = data.dibuat;
     
