@@ -7,12 +7,33 @@ require_once __DIR__ . '/../includes/config.php';
 
 header('Content-Type: application/json');
 
+// Rate limiting: maks 10 request per menit per session
+if (session_status() === PHP_SESSION_NONE) session_start();
+if (!isset($_SESSION['chatbot_rate'])) {
+    $_SESSION['chatbot_rate'] = ['count' => 0, 'reset' => time()];
+}
+if (time() - $_SESSION['chatbot_rate']['reset'] > 60) {
+    $_SESSION['chatbot_rate'] = ['count' => 0, 'reset' => time()];
+}
+$_SESSION['chatbot_rate']['count']++;
+if ($_SESSION['chatbot_rate']['count'] > 10) {
+    http_response_code(429);
+    echo json_encode(['status' => 'error', 'message' => 'Terlalu banyak permintaan. Coba lagi dalam 1 menit.']);
+    exit;
+}
+
 $input = json_decode(file_get_contents('php://input'), true);
-$userMessage = $input['message'] ?? '';
+$userMessage = trim(strip_tags($input['message'] ?? ''));
 $userMessageLower = strtolower($userMessage);
 
 if (empty($userMessage)) {
     echo json_encode(['status' => 'error', 'message' => 'Pesan tidak boleh kosong.']);
+    exit;
+}
+
+// Batasi panjang pesan
+if (mb_strlen($userMessage) > 500) {
+    echo json_encode(['status' => 'error', 'message' => 'Pesan terlalu panjang. Maksimal 500 karakter.']);
     exit;
 }
 
@@ -73,7 +94,10 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false); // Khusus localhost
+// Hanya disable SSL di environment development (localhost)
+if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'])) {
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+}
 curl_setopt($ch, CURLOPT_TIMEOUT, 10); // Set timeout maksimal 10 detik agar tidak hang jika API lambat
 
 $response = curl_exec($ch);

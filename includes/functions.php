@@ -15,6 +15,51 @@ function sanitize($data) {
 }
 
 /**
+ * Generate CSRF hidden input field
+ * @return string HTML hidden input
+ */
+function csrfField() {
+    return '<input type="hidden" name="csrf_token" value="' . ($_SESSION['csrf_token'] ?? '') . '">';
+}
+
+/**
+ * Verifikasi CSRF token dari POST request
+ * @return bool true jika valid
+ */
+function verifyCsrf() {
+    if (!isset($_POST['csrf_token']) || !isset($_SESSION['csrf_token'])) {
+        return false;
+    }
+    return hash_equals($_SESSION['csrf_token'], $_POST['csrf_token']);
+}
+
+/**
+ * Rate limiting sederhana berbasis session
+ * @param string $key   Identifier unik (e.g., 'login_admin')
+ * @param int $maxAttempts Maksimal percobaan
+ * @param int $windowSeconds Jendela waktu (detik)
+ * @return bool true jika masih diizinkan, false jika rate-limited
+ */
+function checkRateLimit($key, $maxAttempts = 5, $windowSeconds = 300) {
+    if (!isset($_SESSION['rate_limit'][$key])) {
+        $_SESSION['rate_limit'][$key] = ['count' => 0, 'first_attempt' => time()];
+    }
+    $rl = &$_SESSION['rate_limit'][$key];
+
+    // Reset window jika sudah expired
+    if (time() - $rl['first_attempt'] > $windowSeconds) {
+        $rl = ['count' => 0, 'first_attempt' => time()];
+    }
+
+    $rl['count']++;
+
+    if ($rl['count'] > $maxAttempts) {
+        return false; // Rate limited
+    }
+    return true;
+}
+
+/**
  * Format angka ke Rupiah
  * @param float $angka
  * @return string "Rp 35.000"
@@ -57,11 +102,12 @@ function getFlash() {
         'warning' => '⚠',
         'info'    => 'ℹ'
     ];
+    $type = e($flash['type'] ?? 'info');
     $icon = $icons[$flash['type']] ?? 'ℹ';
 
-    return '<div class="flash-message flash-' . $flash['type'] . '" id="flashMessage">
+    return '<div class="flash-message flash-' . $type . '" id="flashMessage">
                 <span class="flash-icon">' . $icon . '</span>
-                <span class="flash-text">' . $flash['message'] . '</span>
+                <span class="flash-text">' . e($flash['message']) . '</span>
                 <button class="flash-close" onclick="this.parentElement.remove()">×</button>
             </div>';
 }
@@ -293,52 +339,64 @@ function redeemPoin($conn, $memberId, $rewardId) {
         return ['success' => false, 'message' => 'Reward tidak ditemukan.'];
     }
 
-    // Cek saldo poin
-    $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
-    $stmt->bind_param('i', $memberId);
-    $stmt->execute();
-    $member = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
+    // Gunakan transaction untuk mencegah race condition
+    $conn->begin_transaction();
 
-    if ($member['total_poin'] < $reward['poin_diperlukan']) {
-        return ['success' => false, 'message' => 'Poin tidak mencukupi. Butuh ' . $reward['poin_diperlukan'] . ' poin.'];
+    try {
+        // Lock row member saat SELECT untuk mencegah concurrent redeem
+        $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ? FOR UPDATE");
+        $stmt->bind_param('i', $memberId);
+        $stmt->execute();
+        $member = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+
+        if ($member['total_poin'] < $reward['poin_diperlukan']) {
+            $conn->rollback();
+            return ['success' => false, 'message' => 'Poin tidak mencukupi. Butuh ' . $reward['poin_diperlukan'] . ' poin.'];
+        }
+
+        // Kurangi poin
+        $poinUsed = $reward['poin_diperlukan'];
+        $stmt = $conn->prepare("UPDATE member SET total_poin = total_poin - ? WHERE id = ?");
+        $stmt->bind_param('ii', $poinUsed, $memberId);
+        $stmt->execute();
+        $stmt->close();
+
+        // Ambil saldo akhir
+        $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
+        $stmt->bind_param('i', $memberId);
+        $stmt->execute();
+        $saldo = $stmt->get_result()->fetch_assoc()['total_poin'];
+        $stmt->close();
+
+        // Catat history redeem
+        $stmt = $conn->prepare("INSERT INTO poin_history (member_id, booking_id, jenis, jumlah, saldo_akhir, keterangan) VALUES (?, NULL, 'Redeem', ?, ?, ?)");
+        $keterangan = 'Tukar: ' . $reward['nama'];
+        $stmt->bind_param('iiis', $memberId, $poinUsed, $saldo, $keterangan);
+        $stmt->execute();
+        $stmt->close();
+
+        // Generate voucher
+        $kodeVoucher = generateKodeVoucher();
+        $expiredAt = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+        $stmt = $conn->prepare("INSERT INTO reward_claims (member_id, reward_id, poin_digunakan, kode_voucher, expired_at) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param('iiiis', $memberId, $rewardId, $poinUsed, $kodeVoucher, $expiredAt);
+        $stmt->execute();
+        $stmt->close();
+
+        $conn->commit();
+
+        return [
+            'success' => true,
+            'message' => 'Berhasil menukar ' . $reward['nama'] . '!',
+            'kode_voucher' => $kodeVoucher
+        ];
+    } catch (Exception $e) {
+        $conn->rollback();
+        error_log('Redeem poin error: ' . $e->getMessage());
+        return ['success' => false, 'message' => 'Terjadi kesalahan. Silakan coba lagi.'];
     }
-
-    // Kurangi poin
-    $poinUsed = $reward['poin_diperlukan'];
-    $stmt = $conn->prepare("UPDATE member SET total_poin = total_poin - ? WHERE id = ?");
-    $stmt->bind_param('ii', $poinUsed, $memberId);
-    $stmt->execute();
-    $stmt->close();
-
-    // Ambil saldo akhir
-    $stmt = $conn->prepare("SELECT total_poin FROM member WHERE id = ?");
-    $stmt->bind_param('i', $memberId);
-    $stmt->execute();
-    $saldo = $stmt->get_result()->fetch_assoc()['total_poin'];
-    $stmt->close();
-
-    // Catat history redeem
-    $stmt = $conn->prepare("INSERT INTO poin_history (member_id, booking_id, jenis, jumlah, saldo_akhir, keterangan) VALUES (?, NULL, 'Redeem', ?, ?, ?)");
-    $keterangan = 'Tukar: ' . $reward['nama'];
-    $stmt->bind_param('iiis', $memberId, $poinUsed, $saldo, $keterangan);
-    $stmt->execute();
-    $stmt->close();
-
-    // Generate voucher
-    $kodeVoucher = generateKodeVoucher();
-    $expiredAt = date('Y-m-d H:i:s', strtotime('+30 days'));
-
-    $stmt = $conn->prepare("INSERT INTO reward_claims (member_id, reward_id, poin_digunakan, kode_voucher, expired_at) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param('iiiis', $memberId, $rewardId, $poinUsed, $kodeVoucher, $expiredAt);
-    $stmt->execute();
-    $stmt->close();
-
-    return [
-        'success' => true,
-        'message' => 'Berhasil menukar ' . $reward['nama'] . '!',
-        'kode_voucher' => $kodeVoucher
-    ];
 }
 
 /**

@@ -17,17 +17,23 @@ $errors = [];
 $nama = $email = $no_hp = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        $errors[] = 'Sesi tidak valid. Silakan muat ulang halaman.';
+    } else {
     $nama = trim($_POST['nama'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $no_hp = trim($_POST['no_hp'] ?? '');
-    $password = $_POST['password'] ?? '';
+    $password = $_POST['password'] ?? ''; // Jangan sanitize password
     $confirm_password = $_POST['confirm_password'] ?? '';
 
     // Validasi input
     if (empty($nama)) $errors[] = 'Nama lengkap wajib diisi.';
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Email tidak valid.';
     if (empty($no_hp)) $errors[] = 'Nomor HP wajib diisi.';
-    if (empty($password) || strlen($password) < 6) $errors[] = 'Password minimal 6 karakter.';
+    if (empty($password) || strlen($password) < 8) $errors[] = 'Password minimal 8 karakter.';
+    if (!preg_match('/[A-Z]/', $password)) $errors[] = 'Password harus mengandung minimal 1 huruf besar.';
+    if (!preg_match('/[0-9]/', $password)) $errors[] = 'Password harus mengandung minimal 1 angka.';
     if ($password !== $confirm_password) $errors[] = 'Konfirmasi password tidak cocok.';
 
     // Cek apakah email sudah terdaftar
@@ -54,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt->close();
     }
+    } // tutup else CSRF
 }
 
 require_once BASE_PATH . '/includes/header.php';
@@ -78,6 +85,7 @@ require_once BASE_PATH . '/includes/header.php';
             <?php endif; ?>
 
             <form method="POST" action="">
+                <?= csrfField() ?>
                 <div class="form-group">
                     <label class="form-label" for="nama" style="display: flex; align-items: center; gap: 8px;">
                         <i data-lucide="user" style="width: 16px; height: 16px;"></i>

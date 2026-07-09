@@ -52,6 +52,7 @@ function loginAdmin($conn, $username, $password) {
     if ($result->num_rows === 1) {
         $admin = $result->fetch_assoc();
         if (password_verify($password, $admin['password'])) {
+            session_regenerate_id(true); // Cegah session fixation
             $_SESSION['admin_id'] = $admin['id'];
             $_SESSION['admin_username'] = $admin['username'];
             $_SESSION['admin_nama'] = $admin['nama'];
@@ -76,6 +77,7 @@ function loginMember($conn, $email, $password) {
     if ($result->num_rows === 1) {
         $member = $result->fetch_assoc();
         if (password_verify($password, $member['password'])) {
+            session_regenerate_id(true); // Cegah session fixation
             $_SESSION['member_id'] = $member['id'];
             $_SESSION['member_nama'] = $member['nama'];
             $_SESSION['member_email'] = $member['email'];

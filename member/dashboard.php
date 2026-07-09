@@ -493,6 +493,10 @@ require_once BASE_PATH . '/includes/header.php';
 <script>
 var currentRedeemId = null;
 
+function escapeHtmlJS(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+
 function redeemReward(id, name, poin) {
     currentRedeemId = id;
     document.getElementById('redeemName').textContent = name;
@@ -530,17 +534,17 @@ function confirmRedeem() {
         if (data.status === 'success') {
             resultDiv.innerHTML = '<div style="background:rgba(46,204,113,0.1);border:1px solid rgba(46,204,113,0.3);border-radius:12px;padding:20px;">' +
                 '<div style="color:#2ecc71;font-size:1.1rem;font-weight:700;margin-bottom:8px;">✓ Berhasil!</div>' +
-                '<p style="color:var(--color-text-muted);margin-bottom:15px;">' + data.message + '</p>' +
+                '<p style="color:var(--color-text-muted);margin-bottom:15px;">' + escapeHtmlJS(data.message) + '</p>' +
                 '<div style="background:rgba(212,175,55,0.1);border:1px dashed rgba(212,175,55,0.4);border-radius:8px;padding:12px;">' +
                 '<div style="font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:4px;">Kode Voucher Anda</div>' +
-                '<div style="font-size:1.3rem;font-weight:800;letter-spacing:2px;color:var(--color-accent);">' + data.kode_voucher + '</div>' +
+                '<div style="font-size:1.3rem;font-weight:800;letter-spacing:2px;color:var(--color-accent);">' + escapeHtmlJS(data.kode_voucher) + '</div>' +
                 '</div>' +
                 '<p style="margin-top:12px;font-size:var(--text-sm);color:var(--color-text-muted);">Sisa poin: ' + data.sisa_poin.toLocaleString() + '</p>' +
                 '</div>' +
                 '<button class="btn btn--primary" style="margin-top:15px;" onclick="location.reload()">Tutup</button>';
         } else {
             resultDiv.innerHTML = '<div style="color:#e74c3c;font-weight:600;margin-bottom:10px;">✕ Gagal</div>' +
-                '<p style="color:var(--color-text-muted);">' + data.message + '</p>' +
+                '<p style="color:var(--color-text-muted);">' + escapeHtmlJS(data.message) + '</p>' +
                 '<button class="btn btn--secondary" style="margin-top:15px;" onclick="closeRedeemModal()">Tutup</button>';
         }
     })

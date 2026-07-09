@@ -361,8 +361,16 @@ document.addEventListener('DOMContentLoaded', function () {
         var icons = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' };
         var toast = document.createElement('div');
         toast.className = 'toast-message toast-' + (type || 'info');
-        toast.innerHTML = '<span class="toast-icon">' + (icons[type] || 'ℹ') + '</span>' +
-            '<span>' + message + '</span>';
+        
+        var iconSpan = document.createElement('span');
+        iconSpan.className = 'toast-icon';
+        iconSpan.textContent = icons[type] || 'ℹ';
+        
+        var textSpan = document.createElement('span');
+        textSpan.textContent = message;
+
+        toast.appendChild(iconSpan);
+        toast.appendChild(textSpan);
 
         document.body.appendChild(toast);
 

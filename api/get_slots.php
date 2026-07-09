@@ -9,9 +9,10 @@
 
 ob_start(); // Buffer output to prevent stray whitespace/BOM
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-
+// Restrict CORS to same origin
 require_once dirname(__DIR__) . '/includes/config.php';
+header('Access-Control-Allow-Origin: ' . BASE_URL);
+
 session_write_close(); // Prevent session locking for concurrent requests
 require_once dirname(__DIR__) . '/includes/functions.php';
 

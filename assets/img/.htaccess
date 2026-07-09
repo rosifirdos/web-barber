@@ -1,0 +1,9 @@
+# Mencegah eksekusi script PHP di direktori upload
+<FilesMatch "\.(php|php5|phtml|phar|cgi)$">
+    Deny from all
+</FilesMatch>
+
+# Hanya izinkan file gambar
+<FilesMatch "\.(jpg|jpeg|png|webp|gif|svg)$">
+    Allow from all
+</FilesMatch>

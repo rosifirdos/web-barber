@@ -15,6 +15,12 @@ $uploadDir = BASE_PATH . '/assets/img/';
 
 // Handle CRUD Operations
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifikasi CSRF untuk semua POST
+    if (!verifyCsrf()) {
+        setFlash('error', 'Sesi tidak valid. Silakan muat ulang halaman.');
+        redirect(BASE_URL . '/admin/layanan.php');
+    }
+
     $action = sanitize($_POST['action'] ?? '');
     
     // ============================================
@@ -44,7 +50,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
             if (in_array($fileExtension, $allowedExtensions)) {
-                if ($fileSize <= 2 * 1024 * 1024) { // limit 2MB
+                // Validasi MIME type yang sebenarnya
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $fileTmpPath);
+                finfo_close($finfo);
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+                if (!in_array($mimeType, $allowedMimes)) {
+                    $errors[] = 'File yang diupload bukan gambar yang valid (MIME type tidak sesuai).';
+                } elseif (getimagesize($fileTmpPath) === false) {
+                    $errors[] = 'File yang diupload bukan gambar yang valid.';
+                } elseif ($fileSize <= 2 * 1024 * 1024) { // limit 2MB
                     $newFileName = 'service-' . time() . '-' . rand(1000, 9999) . '.' . $fileExtension;
                     
                     // Create directory if not exists
@@ -76,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
             redirect(BASE_URL . '/admin/layanan.php');
         } else {
-            setFlash('error', implode('<br>', $errors));
+            setFlash('error', implode(' | ', $errors));
         }
     }
     
@@ -116,7 +132,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $allowedExtensions = ['jpg', 'jpeg', 'png', 'webp'];
 
             if (in_array($fileExtension, $allowedExtensions)) {
-                if ($fileSize <= 2 * 1024 * 1024) { // limit 2MB
+                // Validasi MIME type yang sebenarnya
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $mimeType = finfo_file($finfo, $fileTmpPath);
+                finfo_close($finfo);
+                $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+
+                if (!in_array($mimeType, $allowedMimes)) {
+                    $errors[] = 'File yang diupload bukan gambar yang valid (MIME type tidak sesuai).';
+                } elseif (getimagesize($fileTmpPath) === false) {
+                    $errors[] = 'File yang diupload bukan gambar yang valid.';
+                } elseif ($fileSize <= 2 * 1024 * 1024) { // limit 2MB
                     $newFileName = 'service-' . time() . '-' . rand(1000, 9999) . '.' . $fileExtension;
 
                     if (move_uploaded_file($fileTmpPath, $uploadDir . $newFileName)) {
@@ -147,17 +173,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->close();
             redirect(BASE_URL . '/admin/layanan.php');
         } else {
-            setFlash('error', implode('<br>', $errors));
+            setFlash('error', implode(' | ', $errors));
         }
     }
 }
 
 // ============================================
-// ACTION: DELETE / TOGGLE ACTIVE (GET)
+// ACTION: DELETE / TOGGLE ACTIVE (POST)
 // ============================================
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $action = $_GET['action'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && in_array($_POST['action'], ['delete', 'toggle'])) {
+    $id = (int)($_POST['id'] ?? 0);
+    $action = $_POST['action'];
 
     // Check if service exists
     $checkStmt = $conn->prepare("SELECT id, nama, gambar FROM layanan WHERE id = ?");
@@ -177,7 +203,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
                     if ($service['gambar'] && file_exists($uploadDir . $service['gambar'])) {
                         @unlink($uploadDir . $service['gambar']);
                     }
-                    setFlash('success', 'Layanan "' . $service['nama'] . '" berhasil dihapus secara permanen.');
+                    setFlash('success', 'Layanan berhasil dihapus secara permanen.');
                 }
                 $stmt->close();
             } catch (mysqli_sql_exception $e) {
@@ -185,7 +211,7 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
                 $stmt = $conn->prepare("UPDATE layanan SET is_active = 0 WHERE id = ?");
                 $stmt->bind_param('i', $id);
                 if ($stmt->execute()) {
-                    setFlash('warning', 'Layanan "' . $service['nama'] . '" sedang digunakan dalam riwayat booking. Layanan telah dinonaktifkan (soft delete) agar riwayat tetap terjaga.');
+                    setFlash('warning', 'Layanan sedang digunakan dalam riwayat booking. Layanan telah dinonaktifkan.');
                 } else {
                     setFlash('error', 'Gagal menghapus atau menonaktifkan layanan.');
                 }
@@ -282,9 +308,14 @@ $servicesList = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="?action=toggle&id=<?= $s['id'] ?>" class="card__badge <?= $statusClass ?>" style="text-decoration: none;" title="Klik untuk mengubah status">
-                                        <?= $statusText ?>
-                                    </a>
+                                    <form method="POST" action="" style="display:inline;">
+                                        <?= csrfField() ?>
+                                        <input type="hidden" name="action" value="toggle">
+                                        <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                        <button type="submit" class="card__badge <?= $statusClass ?>" style="text-decoration: none; cursor: pointer; border: none; background: inherit;" title="Klik untuk mengubah status">
+                                            <?= $statusText ?>
+                                        </button>
+                                    </form>
                                 </td>
                                 <td>
                                     <div class="table-actions" style="justify-content: center;">
@@ -294,9 +325,14 @@ $servicesList = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
                                         </button>
 
                                         <!-- Delete -->
-                                        <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin menghapus layanan &quot;<?= e($s['nama']) ?>&quot;? Jika sudah ada pesanan terkait, layanan ini akan dinonaktifkan.', '?action=delete&id=<?= $s['id'] ?>')" title="Hapus Layanan">
-                                            <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
-                                        </button>
+                                        <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin menghapus layanan ini? Jika sudah ada pesanan terkait, layanan ini akan dinonaktifkan.')">
+                                            <?= csrfField() ?>
+                                            <input type="hidden" name="action" value="delete">
+                                            <input type="hidden" name="id" value="<?= $s['id'] ?>">
+                                            <button type="submit" class="btn-action btn-action--delete" title="Hapus Layanan">
+                                                <i data-lucide="trash-2" style="width: 15px; height: 15px;"></i>
+                                            </button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -316,6 +352,7 @@ $servicesList = $res ? $res->fetch_all(MYSQLI_ASSOC) : [];
     <div class="admin-modal__container">
         <form id="layananForm" method="POST" action="" enctype="multipart/form-data">
             <!-- Hidden Fields -->
+            <?= csrfField() ?>
             <input type="hidden" name="action" id="formAction" value="add">
             <input type="hidden" name="id" id="formId" value="">
 

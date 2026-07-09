@@ -4,6 +4,7 @@
  */
 require_once __DIR__ . '/includes/config.php';
 require_once __DIR__ . '/includes/functions.php';
+require_once __DIR__ . '/includes/auth.php';
 
 $bookingId = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 
@@ -32,18 +33,33 @@ if ($result->num_rows === 0) {
 $booking = $result->fetch_assoc();
 $stmt->close();
 
-// Check if expired
+// IDOR Protection: Verifikasi kepemilikan booking
+// Jika member login, pastikan booking milik member tersebut
+if (isMemberLoggedIn() && !empty($booking['member_id']) && $booking['member_id'] != $_SESSION['member_id']) {
+    setFlash('error', 'Anda tidak memiliki akses ke halaman pembayaran ini.');
+    redirect(BASE_URL);
+}
+
+// Check if expired (menggunakan prepared statement)
 $now = new DateTime();
 $expired = new DateTime($booking['waktu_expired']);
 
 if ($booking['status'] === 'Pending Payment' && $now > $expired) {
-    // Update to Expired
-    $conn->query("UPDATE booking SET status = 'Expired', status_pembayaran = 'Belum Bayar' WHERE id = " . $bookingId);
+    // Update to Expired — FIXED: menggunakan prepared statement
+    $stmtExp = $conn->prepare("UPDATE booking SET status = 'Expired', status_pembayaran = 'Belum Bayar' WHERE id = ?");
+    $stmtExp->bind_param('i', $bookingId);
+    $stmtExp->execute();
+    $stmtExp->close();
     $booking['status'] = 'Expired';
 }
 
 // Handle simulasi pembayaran success
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['simulate_payment'])) {
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        setFlash('error', 'Sesi tidak valid. Silakan coba lagi.');
+        redirect(BASE_URL . '/pembayaran.php?id=' . $bookingId);
+    }
     if ($booking['status'] === 'Pending Payment') {
         $stmtUpdate = $conn->prepare("UPDATE booking SET status = 'Confirmed', status_pembayaran = 'Sudah DP', metode_pembayaran = 'QRIS' WHERE id = ?");
         $stmtUpdate->bind_param('i', $bookingId);
@@ -215,6 +231,7 @@ include __DIR__ . '/includes/header.php';
             </div>
 
             <form method="POST" action="">
+                <?= csrfField() ?>
                 <button type="submit" name="simulate_payment" class="btn btn--primary btn--block">
                     Saya Sudah Membayar
                 </button>

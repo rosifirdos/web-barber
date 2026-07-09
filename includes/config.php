@@ -5,12 +5,32 @@
  */
 
 // ============================================
-// SESSION
+// SESSION (Hardened)
 // ============================================
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.cookie_httponly', 1);
+    ini_set('session.cookie_samesite', 'Strict');
+    ini_set('session.use_strict_mode', 1);
+    // Uncomment baris berikut jika menggunakan HTTPS:
+    // ini_set('session.cookie_secure', 1);
     session_start();
 }
 ob_start();
+
+// ============================================
+// SECURITY HEADERS
+// ============================================
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+
+// ============================================
+// CSRF TOKEN AUTO-GENERATE
+// ============================================
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 // ============================================
 // KONSTANTA APLIKASI
@@ -74,10 +94,11 @@ define('DB_NAME', getenv('DB_NAME') ?: 'if_barber');
 $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
 if ($conn->connect_error) {
+    error_log('IF Barber DB Error: ' . $conn->connect_error);
     die('<div style="font-family:monospace;padding:2rem;color:#ff6b6b;background:#1a1a2e;text-align:center;">
         <h2>⚠️ Koneksi Database Gagal</h2>
-        <p>' . $conn->connect_error . '</p>
-        <p style="color:#888;">Pastikan XAMPP MySQL sudah berjalan dan database <code>if_barber</code> sudah dibuat.</p>
+        <p>Terjadi kesalahan koneksi database. Silakan coba lagi nanti.</p>
+        <p style="color:#888;">Pastikan XAMPP MySQL sudah berjalan.</p>
     </div>');
 }
 

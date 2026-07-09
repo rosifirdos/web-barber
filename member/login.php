@@ -16,32 +16,39 @@ if (isMemberLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-
-    if (empty($email) || empty($password)) {
-        $error = 'Email dan password wajib diisi.';
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        $error = 'Sesi tidak valid. Silakan coba lagi.';
+    } elseif (!checkRateLimit('login_member', 5, 300)) {
+        $error = 'Terlalu banyak percobaan login. Coba lagi dalam 5 menit.';
     } else {
-        $stmt = $conn->prepare("SELECT id, nama, no_hp, password FROM member WHERE email = ?");
-        $stmt->bind_param('s', $email);
-        $stmt->execute();
-        $result = $stmt->get_result();
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? ''; // Jangan sanitize password
 
-        if ($result->num_rows === 1) {
-            $member = $result->fetch_assoc();
-            if (password_verify($password, $member['password'])) {
-                // Login sukses
-                $_SESSION['member_id'] = $member['id'];
-                $_SESSION['member_nama'] = $member['nama'];
-                $_SESSION['member_hp'] = $member['no_hp'];
-                redirect(BASE_URL . '/member/dashboard.php');
-            } else {
-                $error = 'Password salah.';
-            }
+        if (empty($email) || empty($password)) {
+            $error = 'Email dan password wajib diisi.';
         } else {
-            $error = 'Email tidak ditemukan.';
+            $stmt = $conn->prepare("SELECT id, nama, no_hp, password FROM member WHERE email = ?");
+            $stmt->bind_param('s', $email);
+            $stmt->execute();
+            $result = $stmt->get_result();
+
+            if ($result->num_rows === 1) {
+                $member = $result->fetch_assoc();
+                if (password_verify($password, $member['password'])) {
+                    session_regenerate_id(true); // Cegah session fixation
+                    $_SESSION['member_id'] = $member['id'];
+                    $_SESSION['member_nama'] = $member['nama'];
+                    $_SESSION['member_hp'] = $member['no_hp'];
+                    redirect(BASE_URL . '/member/dashboard.php');
+                } else {
+                    $error = 'Email atau password salah.'; // Pesan generik
+                }
+            } else {
+                $error = 'Email atau password salah.'; // Pesan generik — jangan bocorkan info
+            }
+            $stmt->close();
         }
-        $stmt->close();
     }
 }
 
@@ -66,6 +73,7 @@ require_once BASE_PATH . '/includes/header.php';
             <?php endif; ?>
 
             <form method="POST" action="">
+                <?= csrfField() ?>
                 <div class="form-group">
                     <label class="form-label" for="email" style="display: flex; align-items: center; gap: 8px;">
                         <i data-lucide="mail" style="width: 16px; height: 16px;"></i>

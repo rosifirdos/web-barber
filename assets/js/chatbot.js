@@ -68,6 +68,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    function escapeHtml(str) {
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
     function addMessage(text, sender) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `chatbot-msg chatbot-msg--${sender}`;
@@ -75,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const bubble = document.createElement('div');
         bubble.className = 'chatbot-bubble';
         
-        // Convert basic markdown to text or preserve newlines
-        bubble.innerHTML = text.replace(/\n/g, '<br>');
+        // Convert basic markdown/newlines safely after escaping HTML
+        bubble.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
         
         msgDiv.appendChild(bubble);
         chatbotMessages.appendChild(msgDiv);

@@ -21,6 +21,10 @@ $success = false;
 $bookingId = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        $errors[] = 'Sesi tidak valid. Silakan muat ulang halaman dan coba lagi.';
+    } else {
     // Sanitize inputs
     $nama = sanitize($_POST['nama_pelanggan'] ?? '');
     $noHp = sanitize($_POST['no_hp'] ?? '');
@@ -87,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $stmt->close();
     }
+    } // tutup else CSRF
 }
 
 // Barber photos mapping
@@ -227,6 +232,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <form method="POST" action="" class="booking-form" id="bookingForm">
+            <?= csrfField() ?>
 
             <!-- ==========================================
                  STEP 1: Pilih Layanan

@@ -16,17 +16,27 @@ if (isAdminLoggedIn()) {
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = sanitize($_POST['username'] ?? '');
-    $password = sanitize($_POST['password'] ?? '');
-
-    if (empty($username) || empty($password)) {
-        $error = 'Username dan password wajib diisi.';
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        $error = 'Sesi tidak valid. Silakan coba lagi.';
     } else {
-        if (loginAdmin($conn, $username, $password)) {
-            setFlash('success', 'Selamat datang kembali, ' . $_SESSION['admin_nama'] . '!');
-            redirect(BASE_URL . '/admin/dashboard.php');
+        // Rate limiting: maks 5 percobaan per 5 menit
+        if (!checkRateLimit('login_admin', 5, 300)) {
+            $error = 'Terlalu banyak percobaan login. Coba lagi dalam 5 menit.';
         } else {
-            $error = 'Username atau password salah.';
+            $username = sanitize($_POST['username'] ?? '');
+            $password = $_POST['password'] ?? ''; // Jangan sanitize password
+
+            if (empty($username) || empty($password)) {
+                $error = 'Username dan password wajib diisi.';
+            } else {
+                if (loginAdmin($conn, $username, $password)) {
+                    setFlash('success', 'Selamat datang kembali, ' . $_SESSION['admin_nama'] . '!');
+                    redirect(BASE_URL . '/admin/dashboard.php');
+                } else {
+                    $error = 'Username atau password salah.';
+                }
+            }
         }
     }
 }
@@ -190,6 +200,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <form method="POST" action="">
+                <?= csrfField() ?>
                 <div class="form-group">
                     <label class="form-label" for="username">Username</label>
                     <div class="input-icon-wrapper">

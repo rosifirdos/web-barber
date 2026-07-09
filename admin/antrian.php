@@ -10,10 +10,16 @@ $activePage = 'antrian';
 
 include __DIR__ . '/header.php';
 
-// Handle Action (Ubah Status / Batal)
-if (isset($_GET['action']) && isset($_GET['id'])) {
-    $id = (int)$_GET['id'];
-    $action = $_GET['action'];
+// Handle Action (Ubah Status / Batal) — Menggunakan POST + CSRF
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && isset($_POST['id'])) {
+    // Verifikasi CSRF
+    if (!verifyCsrf()) {
+        setFlash('error', 'Sesi tidak valid. Silakan coba lagi.');
+        redirect(BASE_URL . '/admin/antrian.php');
+    }
+
+    $id = (int)$_POST['id'];
+    $action = $_POST['action'];
     
     // Check if booking exists
     $checkStmt = $conn->prepare("SELECT id, status FROM booking WHERE id = ?");
@@ -68,11 +74,9 @@ if (isset($_GET['action']) && isset($_GET['id'])) {
             $stmt->close();
         }
     }
-    // Redirect back to clean up URL
-    $queryParams = $_GET;
-    unset($queryParams['action'], $queryParams['id']);
-    $queryString = !empty($queryParams) ? '?' . http_build_query($queryParams) : '';
-    redirect(BASE_URL . '/admin/antrian.php' . $queryString);
+    // Redirect back
+    $page = isset($_POST['page']) ? (int)$_POST['page'] : 1;
+    redirect(BASE_URL . '/admin/antrian.php?page=' . $page);
 }
 
 // Filter Setup
@@ -295,28 +299,58 @@ $queryString = !empty($queryParams) ? '&' . http_build_query($queryParams) : '';
 
                                         <!-- Quick Status Actions -->
                                         <?php if ($b['status'] === 'Pending Payment'): ?>
-                                            <!-- Change to Batal -->
-                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
-                                                <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
-                                            </button>
+                                            <!-- Batal -->
+                                            <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?')">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="action" value="batal">
+                                                <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                                                <input type="hidden" name="page" value="<?= $page ?>">
+                                                <button type="submit" class="btn-action btn-action--delete" title="Batalkan Booking">
+                                                    <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
+                                                </button>
+                                            </form>
                                         <?php elseif ($b['status'] === 'Confirmed'): ?>
-                                            <!-- Change to Proses -->
-                                            <a href="?action=proses&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>" class="btn-action btn-action--process" title="Mulai Proses Cukur">
-                                                <i data-lucide="play" style="width: 15px; height: 15px;"></i>
-                                            </a>
-                                            <!-- Change to Batal -->
-                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
-                                                <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
-                                            </button>
+                                            <!-- Proses -->
+                                            <form method="POST" action="" style="display:inline;">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="action" value="proses">
+                                                <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                                                <input type="hidden" name="page" value="<?= $page ?>">
+                                                <button type="submit" class="btn-action btn-action--process" title="Mulai Proses Cukur">
+                                                    <i data-lucide="play" style="width: 15px; height: 15px;"></i>
+                                                </button>
+                                            </form>
+                                            <!-- Batal -->
+                                            <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?')">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="action" value="batal">
+                                                <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                                                <input type="hidden" name="page" value="<?= $page ?>">
+                                                <button type="submit" class="btn-action btn-action--delete" title="Batalkan Booking">
+                                                    <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
+                                                </button>
+                                            </form>
                                         <?php elseif ($b['status'] === 'Proses'): ?>
-                                            <!-- Change to Selesai -->
-                                            <a href="?action=selesai&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>" class="btn-action btn-action--success" title="Selesaikan Layanan">
-                                                <i data-lucide="check" style="width: 15px; height: 15px;"></i>
-                                            </a>
-                                            <!-- Change to Batal -->
-                                            <button class="btn-action btn-action--delete" onclick="confirmAction('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?', '?action=batal&id=<?= $b['id'] ?>&page=<?= $page ?><?= $queryString ?>')" title="Batalkan Booking">
-                                                <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
-                                            </button>
+                                            <!-- Selesai -->
+                                            <form method="POST" action="" style="display:inline;">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="action" value="selesai">
+                                                <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                                                <input type="hidden" name="page" value="<?= $page ?>">
+                                                <button type="submit" class="btn-action btn-action--success" title="Selesaikan Layanan">
+                                                    <i data-lucide="check" style="width: 15px; height: 15px;"></i>
+                                                </button>
+                                            </form>
+                                            <!-- Batal -->
+                                            <form method="POST" action="" style="display:inline;" onsubmit="return confirm('Apakah Anda yakin ingin membatalkan booking #<?= str_pad($b['id'], 4, '0', STR_PAD_LEFT) ?>?')">
+                                                <?= csrfField() ?>
+                                                <input type="hidden" name="action" value="batal">
+                                                <input type="hidden" name="id" value="<?= $b['id'] ?>">
+                                                <input type="hidden" name="page" value="<?= $page ?>">
+                                                <button type="submit" class="btn-action btn-action--delete" title="Batalkan Booking">
+                                                    <i data-lucide="ban" style="width: 15px; height: 15px;"></i>
+                                                </button>
+                                            </form>
                                         <?php elseif ($b['status'] === 'Selesai'): ?>
                                             <!-- Cetak Struk -->
                                             <a href="<?= BASE_URL ?>/admin/cetak-struk.php?id=<?= $b['id'] ?>" target="_blank" class="btn-action btn-action--view" title="Cetak Struk PDF">
